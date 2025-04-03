@@ -55,8 +55,8 @@ POST /api/alunos/
       "semestre": 3,
       "data_nascimento": "2000-05-15",
       "endereco": "Rua Exemplo, 123, Bairro Teste, Cidade Exemplo",
-      "created_at": "2023-04-03T15:30:45Z",
-      "updated_at": "2023-04-03T15:30:45Z"
+      "created_at": "2023-04-05T15:30:45Z",
+      "updated_at": "2023-04-05T15:30:45Z"
     },
     // ...mais alunos
   ]
@@ -86,8 +86,8 @@ DELETE /api/alunos/{id}/
   "semestre": 3,
   "data_nascimento": "2000-05-15",
   "endereco": "Rua Exemplo, 123, Bairro Teste, Cidade Exemplo",
-  "created_at": "2023-04-03T15:30:45Z",
-  "updated_at": "2023-04-03T15:30:45Z"
+  "created_at": "2023-04-05T15:30:45Z",
+  "updated_at": "2023-04-05T15:30:45Z"
 }
 ```
 
@@ -111,8 +111,8 @@ GET /api/alunos/{id}/detalhes/
   "semestre": 3,
   "data_nascimento": "2000-05-15",
   "endereco": "Rua Exemplo, 123, Bairro Teste, Cidade Exemplo",
-  "created_at": "2023-04-03T15:30:45Z",
-  "updated_at": "2023-04-03T15:30:45Z",
+  "created_at": "2023-04-05T15:30:45Z",
+  "updated_at": "2023-04-05T15:30:45Z",
   "notas": [
     // lista de notas
   ],
@@ -165,8 +165,8 @@ POST /api/notas/
       "nota_final": "8.65",
       "data_avaliacao": "2023-03-10",
       "semestre": "2023.1",
-      "created_at": "2023-04-03T15:30:45Z",
-      "updated_at": "2023-04-03T15:30:45Z"
+      "created_at": "2023-04-05T15:30:45Z",
+      "updated_at": "2023-04-05T15:30:45Z"
     },
     // ...mais notas
   ]
@@ -215,8 +215,8 @@ POST /api/horarios/
       "sala": "A101",
       "professor": "Dr. Silva",
       "semestre": "2023.1",
-      "created_at": "2023-04-03T15:30:45Z",
-      "updated_at": "2023-04-03T15:30:45Z"
+      "created_at": "2023-04-05T15:30:45Z",
+      "updated_at": "2023-04-05T15:30:45Z"
     },
     // ...mais horários
   ]
@@ -262,8 +262,8 @@ POST /api/frequencias/
       "data": "2023-03-20",
       "status": "PRESENTE",
       "status_display": "Presente",
-      "created_at": "2023-04-03T15:30:45Z",
-      "updated_at": "2023-04-03T15:30:45Z"
+      "created_at": "2023-04-05T15:30:45Z",
+      "updated_at": "2023-04-05T15:30:45Z"
     },
     // ...mais frequências
   ]
@@ -310,8 +310,8 @@ POST /api/financeiro/
       "data_pagamento": null,
       "valor_pago": null,
       "descricao": "Mensalidade 4/2023",
-      "created_at": "2023-04-03T15:30:45Z",
-      "updated_at": "2023-04-03T15:30:45Z"
+      "created_at": "2023-04-05T15:30:45Z",
+      "updated_at": "2023-04-05T15:30:45Z"
     },
     // ...mais dados financeiros
   ]
@@ -356,8 +356,8 @@ POST /api/matriculas/
       "disciplinas": [
         // lista de disciplinas matriculadas
       ],
-      "created_at": "2023-04-03T15:30:45Z",
-      "updated_at": "2023-04-03T15:30:45Z"
+      "created_at": "2023-04-05T15:30:45Z",
+      "updated_at": "2023-04-05T15:30:45Z"
     },
     // ...mais matrículas
   ]
@@ -402,8 +402,8 @@ POST /api/disciplinas-matriculadas/
       "professor": "Dr. Silva",
       "status": "EM_ANDAMENTO",
       "status_display": "Em andamento",
-      "created_at": "2023-04-03T15:30:45Z",
-      "updated_at": "2023-04-03T15:30:45Z"
+      "created_at": "2023-04-05T15:30:45Z",
+      "updated_at": "2023-04-05T15:30:45Z"
     },
     // ...mais disciplinas
   ]
@@ -444,7 +444,7 @@ POST /api/chat-historico/
       "aluno_nome": "Aluno Teste 1",
       "pergunta": "Qual é o horário da disciplina de Banco de Dados?",
       "resposta": "Suas aulas de Banco de Dados são às terças-feiras, das 19:00 às 21:00, na sala B201.",
-      "timestamp": "2023-04-03T14:30:45Z",
+      "timestamp": "2023-04-05T14:30:45Z",
       "dados_contextuais": {
         "intenção": "consulta_horario",
         "confiança": 0.95,
