@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   db:
@@ -65,7 +64,6 @@ services:
   frontend:
     build: ./frontend
     container_name: unichat-frontend
-    user: "${UID}:${GID}"  # Mantenha esta linha
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -81,3 +79,4 @@ networks:
 
 volumes:
   postgres_data:
+  frontend_node_modules:
