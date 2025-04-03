@@ -56,6 +56,40 @@ Quaisquer observações adicionais, insights ou ideias para o futuro.
 ### Observações
 O projeto parece promissor, mas será importante definir bem o escopo do MVP para garantir entrega dentro do prazo de 6 semanas. A integração com LLM local será o maior desafio técnico e deve ser priorizada para validação inicial.
 
+## [Data: 2023-04-04]
+
+### Atividades Realizadas
+- Implementação da estrutura inicial do projeto com Docker
+- Configuração dos containers para banco de dados (PostgreSQL)
+- Configuração do backend com Django REST Framework
+- Configuração do serviço LLM simulado com FastAPI
+- Configuração do frontend com React, Vite e Tailwind CSS
+- Integração inicial entre os serviços
+
+### Decisões Tomadas
+- Uso de volumes Docker nomeados para persistência de dados: melhor isolamento e portabilidade
+- Implementação de verificação de saúde (healthcheck) para o PostgreSQL: garantir que o banco esteja pronto antes de iniciar o backend
+- Armazenamento de UID/GID em arquivo .env: simplificar o uso em diferentes sessões de terminal
+- Remoção da configuração de usuário para o container frontend: resolver problemas de permissão com node_modules
+- Implementação de um serviço LLM simulado inicial: permitir desenvolvimento do frontend sem dependência de um LLM real
+
+### Problemas Encontrados
+- Permissões de arquivos em volumes montados: resolvido com a configuração user: "${UID}:${GID}" nos serviços e uso de arquivo .env
+- Problema específico no PostgreSQL com alteração de permissões: resolvido removendo a configuração de usuário do serviço db
+- Conflito na indentação do docker-compose.yml: corrigido manualmente
+- Erros no frontend relacionados a permissões em node_modules: resolvido usando um volume anônimo (/app/node_modules)
+- Pacote curl não disponível no container backend: adicionado ao Dockerfile
+
+### Próximos Passos
+- Implementar modelos de dados do Django conforme PRD
+- Desenvolver endpoints da API REST
+- Implementar telas principais do frontend
+- Integrar um LLM real ao serviço simulado
+- Desenvolver a lógica de processamento de perguntas com LangChain
+
+### Observações
+A configuração inicial com Docker provou ser mais complexa do que o esperado, especialmente em relação às permissões de arquivos, mas proporciona um ambiente de desenvolvimento isolado e consistente. Para a próxima fase, é importante focar na implementação das funcionalidades centrais definidas no MVP.
+
 ---
 
 <!-- Novas entradas serão adicionadas acima desta linha --> 
