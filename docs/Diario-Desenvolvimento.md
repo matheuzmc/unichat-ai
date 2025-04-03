@@ -92,6 +92,48 @@ A configuração inicial com Docker provou ser mais complexa do que o esperado, 
 
 É essencial definir bem o escopo do MVP para garantir a entrega dentro do prazo de 6 semanas, priorizando funcionalidades críticas e deixando melhorias para iterações futuras.
 
+## [Data: 2024-04-03]
+
+### Atividades Realizadas
+- Implementação da integração do serviço LLM com LangChain e GPT4All
+- Desenvolvimento de interface baseada em prompt para processamento de contexto
+- Criação de sistema de fallback para simulação de respostas quando o modelo não está disponível
+- Implementação da interface de chat no frontend com React
+- Criação de componentes reutilizáveis para o chat (ChatWindow, ChatMessage, ChatInput)
+- Implementação de serviços de API para comunicação entre frontend e backend/LLM
+- Documentação de melhorias futuras para o backend
+- Correção de problemas de compatibilidade de versões no serviço LLM
+- Ajustes nos Dockerfiles para garantir a instalação correta de dependências
+
+### Decisões Tomadas
+- Uso do modo de simulação para o LLM no MVP: evitar necessidade de baixar modelos grandes
+- Implementação de um sistema de prompt baseado em dados do aluno: contextualização das respostas
+- Design responsivo para a interface do chat: garantir usabilidade em diferentes dispositivos
+- Integração com serviço LLM assíncrono: melhor experiência do usuário durante processamento
+- Utilização do GPT4All na versão 0.1.7: compatibilidade com o ambiente atual
+- Estruturação de TypeScript para o frontend: melhor manutenibilidade e detecção de erros
+- Criação de um documento de melhorias futuras: facilitar evolução sistemática do projeto
+
+### Problemas Encontrados
+- Incompatibilidade de versões do GPT4All: necessidade de usar a versão 0.1.7 em vez da 2.0.3
+- Dependências ausentes no container do frontend: resolvido adicionando-as explicitamente ao Dockerfile
+- Dificuldades na geração de respostas contextualizadas: implementado sistema baseado em regras como fallback
+- Incompatibilidade entre APIs do LangChain: resolução com importações específicas de versão
+
+### Próximos Passos
+- Implementar autenticação e perfis de usuário
+- Adicionar testes automatizados para garantir qualidade
+- Refinar o sistema de prompts para melhorar a qualidade das respostas
+- Implementação de dados reais no banco de dados
+- Explorar a integração com modelos LLM mais eficientes
+- Melhorar o design e a experiência do usuário na interface de chat
+- Adicionar funcionalidades como histórico persistente e filtros de consulta
+
+### Observações
+A implementação do MVP avançou significativamente, com uma arquitetura funcional que conecta todos os componentes do sistema. A abordagem de simulação para o LLM permitiu focar no desenvolvimento da interface e fluxos de dados sem depender de modelos grandes. A estrutura modular do serviço LLM permitirá fácil substituição por modelos mais avançados no futuro.
+
+A interface de chat, embora simples, demonstra efetivamente o conceito e permitirá validar a utilidade do sistema com usuários reais. O próximo foco deve ser na melhoria da qualidade das respostas e na expansão das funcionalidades de acordo com o feedback dos usuários.
+
 ---
 
 <!-- Novas entradas serão adicionadas acima desta linha --> 
