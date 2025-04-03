@@ -211,6 +211,89 @@ Este documento registra as decisões técnicas tomadas no projeto UniChat e suas
 4. **Persistência:** Modelos e acesso ao banco de dados
 5. **Infraestrutura:** Docker, logging, monitoramento
 
+## Decisões de Implementação do Backend [Atualização: 2023-04-03]
+
+### Modelos de Dados
+
+**Decisão:** Criar modelos detalhados para representar as entidades acadêmicas.
+
+**Justificativa:**
+- Estrutura de dados completa para atender todos os casos de uso
+- Relacionamentos bem definidos utilizando chaves estrangeiras
+- Campos tipados adequadamente para cada tipo de dado
+- Validadores para garantir a integridade dos dados (ex: notas entre 0 e 10)
+- Campos de metadados para rastreamento (created_at, updated_at)
+
+**Modelos implementados:**
+- Aluno: Informações pessoais e acadêmicas dos estudantes
+- Nota: Histórico de avaliações por disciplina
+- HorarioAula: Agenda de aulas por semana
+- Frequencia: Registro de presença nas aulas
+- DadoFinanceiro: Situação financeira e pagamentos
+- Matricula: Registro de matrícula por semestre
+- DisciplinaMatriculada: Disciplinas cursadas por matrícula
+- ChatHistorico: Registro de interações com o sistema
+
+### API REST
+
+**Decisão:** Adotar REST como padrão de API com Django REST Framework ViewSets.
+
+**Justificativa:**
+- ViewSets simplificam a criação de endpoints CRUD
+- Facilidade de implementação de filtros e ordenação
+- Serialização padronizada dos modelos para JSON
+- Integração com navegação de API para testes manuais
+- Documentação automática com Swagger
+
+**Padrões adotados:**
+- ModelViewSet para operações CRUD completas
+- Actions personalizadas para endpoints específicos (ex: `/alunos/{id}/detalhes/`)
+- Endpoints de filtro por relacionamento (ex: `/notas/por_aluno/?aluno_id=1`)
+- Serializers aninhados para relacionamentos (ex: disciplinas em matrículas)
+- Campos extras em serializers para melhor contexto (ex: aluno_nome)
+
+### Documentação da API
+
+**Decisão:** Utilizar drf-yasg para documentação interativa da API.
+
+**Justificativa:**
+- Geração automática de documentação a partir do código
+- Interface Swagger para teste interativo dos endpoints
+- Alternativa ReDoc para documentação mais limpa
+- Facilita o entendimento e uso da API pelos desenvolvedores frontend
+- Possibilidade de customização da documentação
+
+### Populamento do Banco de Dados
+
+**Decisão:** Criar comandos personalizados para reset e populamento do banco de dados.
+
+**Justificativa:**
+- Dados fictícios realistas para desenvolvimento e testes
+- Comando único para limpar e repopular o banco
+- Relacionamentos corretamente estabelecidos entre entidades
+- Facilita testes de integração e UI
+- Possibilidade de ajuste dos parâmetros de geração de dados
+
+### Internacionalização
+
+**Decisão:** Configurar o Django para suporte ao Português do Brasil.
+
+**Justificativa:**
+- Adequação ao público-alvo brasileiro
+- Mensagens de erro e validação em português
+- Formatação de datas e números no padrão brasileiro
+- Possibilidade de extensão para outros idiomas no futuro
+
+### Segurança
+
+**Decisão:** Implementar autenticação básica inicialmente, com planos para JWT.
+
+**Justificativa:**
+- Autenticação básica simples para fase inicial de desenvolvimento
+- Todos os endpoints exigem autenticação (exceto documentação)
+- Plano de migração para JWT para aplicações móveis/SPA
+- Proteção contra acesso não autorizado aos dados
+
 ## Atualizações Futuras
 
 Este documento será atualizado à medida que novas decisões técnicas forem tomadas no projeto. Cada decisão incluirá:

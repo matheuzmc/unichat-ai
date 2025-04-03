@@ -32,63 +32,65 @@ Quaisquer observações adicionais, insights ou ideias para o futuro.
 ## [Data: 2023-04-03]
 
 ### Atividades Realizadas
-- Criação da documentação inicial do projeto
-- Definição do PRD (Product Requirements Document)
-- Elaboração do plano de implementação MVP
-- Criação do glossário técnico e outros documentos de suporte
+- Criação da documentação inicial do projeto (PRD, MVP, glossário técnico)
+- Implementação da estrutura inicial do projeto com Docker
+- Configuração dos containers para backend, frontend, banco de dados e serviço LLM
+- Implementação dos modelos de dados no backend (Django)
+- Criação dos serializadores para converter objetos Django em JSON
+- Implementação dos viewsets para APIs RESTful
+- Configuração das rotas da API
+- Registro dos modelos no painel administrativo
+- Implementação de comandos para resetar e popular o banco de dados com dados fictícios
+- Criação de superusuário para acesso administrativo
+- Adição de documentação Swagger para API
+- Padronização dos nomes de arquivos de documentação (remoção de acentos)
 
 ### Decisões Tomadas
 - Escolha de Django REST Framework para o backend: maior produtividade e ecossistema maduro
 - Escolha de React/Vite para o frontend: performance e experiência de desenvolvimento
 - Decisão de usar LLM open-source: controle local e redução de custos
 - Adoção do LangChain para integração de fontes de dados: simplificação da arquitetura
-
-### Problemas Encontrados
-- Indefinição sobre qual LLM open-source específico utilizar: planejado um estudo comparativo entre GPT4All e Llama2
-- Preocupações sobre performance local de LLMs: necessidade de testar em ambiente representativo
-
-### Próximos Passos
-- Configurar ambiente de desenvolvimento com Docker
-- Implementar estrutura básica do projeto Django
-- Definir modelos de dados e criar migrações iniciais
-- Inicializar projeto React/Vite com configuração de Tailwind e TypeScript
-
-### Observações
-O projeto parece promissor, mas será importante definir bem o escopo do MVP para garantir entrega dentro do prazo de 6 semanas. A integração com LLM local será o maior desafio técnico e deve ser priorizada para validação inicial.
-
-## [Data: 2023-04-04]
-
-### Atividades Realizadas
-- Implementação da estrutura inicial do projeto com Docker
-- Configuração dos containers para banco de dados (PostgreSQL)
-- Configuração do backend com Django REST Framework
-- Configuração do serviço LLM simulado com FastAPI
-- Configuração do frontend com React, Vite e Tailwind CSS
-- Integração inicial entre os serviços
-
-### Decisões Tomadas
 - Uso de volumes Docker nomeados para persistência de dados: melhor isolamento e portabilidade
 - Implementação de verificação de saúde (healthcheck) para o PostgreSQL: garantir que o banco esteja pronto antes de iniciar o backend
 - Armazenamento de UID/GID em arquivo .env: simplificar o uso em diferentes sessões de terminal
 - Remoção da configuração de usuário para o container frontend: resolver problemas de permissão com node_modules
 - Implementação de um serviço LLM simulado inicial: permitir desenvolvimento do frontend sem dependência de um LLM real
+- Uso do padrão ModelViewSet para APIs: simplifica a criação de endpoints CRUD
+- Implementação de ações personalizadas nas APIs (por exemplo, /api/alunos/{id}/detalhes/): facilita consultas específicas
+- Implementação de filtros por aluno em cada endpoint (por exemplo, /api/notas/por_aluno/?aluno_id=1): melhora a usabilidade
+- Utilização de Django Filters e SearchFilter: permite pesquisa e filtragem flexível
+- Utilização de drf-yasg para documentação Swagger: documentação automática e interativa da API
+- Padronização de nomenclatura sem acentos: evita problemas de codificação em sistemas diversos
 
 ### Problemas Encontrados
+- Indefinição sobre qual LLM open-source específico utilizar: planejado um estudo comparativo entre GPT4All e Llama2
+- Preocupações sobre performance local de LLMs: necessidade de testar em ambiente representativo
 - Permissões de arquivos em volumes montados: resolvido com a configuração user: "${UID}:${GID}" nos serviços e uso de arquivo .env
 - Problema específico no PostgreSQL com alteração de permissões: resolvido removendo a configuração de usuário do serviço db
 - Conflito na indentação do docker-compose.yml: corrigido manualmente
 - Erros no frontend relacionados a permissões em node_modules: resolvido usando um volume anônimo (/app/node_modules)
 - Pacote curl não disponível no container backend: adicionado ao Dockerfile
+- Erro na expansão das variáveis de ambiente UID/GID: corrigido usando o comando printf para criar corretamente o arquivo .env
+- Problema de permissões nos containers: resolvido reconstruindo os containers com as IDs corretas do usuário
+- Erros na manipulação de tipos Decimal e float: corrigido usando Decimal para todos os valores numéricos no cálculo de notas
+- Duplicação de registros ao popular o banco: implementado um comando reset_db para limpar o banco antes de popular
 
 ### Próximos Passos
-- Implementar modelos de dados do Django conforme PRD
-- Desenvolver endpoints da API REST
-- Implementar telas principais do frontend
-- Integrar um LLM real ao serviço simulado
-- Desenvolver a lógica de processamento de perguntas com LangChain
+- Desenvolver o frontend com ReactJS
+- Implementar a autenticação e autorização
+- Criar as telas de login e cadastro
+- Desenvolver o componente de chat
+- Implementar a integração com o serviço LLM
+- Realizar testes de integração do frontend com o backend
+- Testar a performance do LLM em ambiente representativo
+- Implementar o protocolo de contexto personalizado (MCP)
 
 ### Observações
-A configuração inicial com Docker provou ser mais complexa do que o esperado, especialmente em relação às permissões de arquivos, mas proporciona um ambiente de desenvolvimento isolado e consistente. Para a próxima fase, é importante focar na implementação das funcionalidades centrais definidas no MVP.
+O projeto teve um avanço significativo no primeiro dia de implementação. A infraestrutura básica está configurada, o backend possui uma API REST robusta com modelos de dados relacionais, e o ambiente de desenvolvimento está funcional com Docker. A estrutura do backend está bem definida e segue padrões RESTful, enquanto a documentação automática com Swagger facilita o entendimento e teste da API.
+
+A configuração inicial com Docker provou ser mais complexa do que o esperado, especialmente em relação às permissões de arquivos, mas proporciona um ambiente de desenvolvimento isolado e consistente. Para a próxima fase, é importante focar no desenvolvimento do frontend e na integração com o LLM, que será o maior desafio técnico.
+
+É essencial definir bem o escopo do MVP para garantir a entrega dentro do prazo de 6 semanas, priorizando funcionalidades críticas e deixando melhorias para iterações futuras.
 
 ---
 

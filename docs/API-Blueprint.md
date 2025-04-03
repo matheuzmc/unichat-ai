@@ -1,29 +1,75 @@
 # API Blueprint: UniChat
 
-Este documento descreve a estrutura inicial da API REST que será implementada para o UniChat. Trata-se de uma especificação conceitual que servirá como guia para o desenvolvimento.
+Este documento descreve a estrutura da API REST implementada para o UniChat. Este blueprint reflete a implementação atual (2023-04-03) e serve como referência para desenvolvedores.
 
 ## Base URL
 
 ```
-/api/v1/
+/api/
 ```
 
 ## Autenticação
 
-Para o MVP, a autenticação será simplificada. Em versões futuras, será implementada autenticação JWT.
+A API utiliza autenticação básica do Django REST Framework. Para acessar recursos protegidos, utilize:
 
 ```
-Authorization: Bearer {token}
+Authorization: Basic {base64(username:password)}
 ```
+
+## Documentação Interativa
+
+A API possui documentação interativa disponível através do Swagger UI e ReDoc:
+
+- **Swagger UI**: `/swagger/`
+- **ReDoc**: `/redoc/`
 
 ## Recursos e Endpoints
 
 ### Alunos
 
-#### Obter Dados do Aluno
+#### Listar/Criar Alunos
 
 ```
-GET /alunos/{id}/
+GET /api/alunos/
+POST /api/alunos/
+```
+
+**Filtros disponíveis**
+- `curso`: Filtrar por curso
+- `semestre`: Filtrar por semestre
+- `search`: Busca por nome, matrícula ou email
+
+**Resposta de Sucesso (200 OK)**
+```json
+{
+  "count": 50,
+  "next": "http://localhost:8000/api/alunos/?page=2",
+  "previous": null,
+  "results": [
+    {
+      "id": 1,
+      "nome": "Aluno Teste 1",
+      "email": "aluno1@example.com",
+      "matricula": "20230001",
+      "curso": "Ciência da Computação",
+      "semestre": 3,
+      "data_nascimento": "2000-05-15",
+      "endereco": "Rua Exemplo, 123, Bairro Teste, Cidade Exemplo",
+      "created_at": "2023-04-03T15:30:45Z",
+      "updated_at": "2023-04-03T15:30:45Z"
+    },
+    // ...mais alunos
+  ]
+}
+```
+
+#### Recuperar/Atualizar/Excluir Aluno
+
+```
+GET /api/alunos/{id}/
+PUT /api/alunos/{id}/
+PATCH /api/alunos/{id}/
+DELETE /api/alunos/{id}/
 ```
 
 **Parâmetros**
@@ -33,313 +79,446 @@ GET /alunos/{id}/
 ```json
 {
   "id": 1,
-  "nome": "João Silva",
-  "email": "joao.silva@universidade.edu",
-  "matricula": "202301001",
-  "curso": "Engenharia de Software",
+  "nome": "Aluno Teste 1",
+  "email": "aluno1@example.com",
+  "matricula": "20230001",
+  "curso": "Ciência da Computação",
   "semestre": 3,
   "data_nascimento": "2000-05-15",
-  "endereco": "Rua das Flores, 123 - São Paulo"
+  "endereco": "Rua Exemplo, 123, Bairro Teste, Cidade Exemplo",
+  "created_at": "2023-04-03T15:30:45Z",
+  "updated_at": "2023-04-03T15:30:45Z"
+}
+```
+
+#### Obter Detalhes Completos do Aluno
+
+```
+GET /api/alunos/{id}/detalhes/
+```
+
+**Parâmetros**
+- `id` (obrigatório): ID único do aluno
+
+**Resposta de Sucesso (200 OK)**
+```json
+{
+  "id": 1,
+  "nome": "Aluno Teste 1",
+  "email": "aluno1@example.com",
+  "matricula": "20230001",
+  "curso": "Ciência da Computação",
+  "semestre": 3,
+  "data_nascimento": "2000-05-15",
+  "endereco": "Rua Exemplo, 123, Bairro Teste, Cidade Exemplo",
+  "created_at": "2023-04-03T15:30:45Z",
+  "updated_at": "2023-04-03T15:30:45Z",
+  "notas": [
+    // lista de notas
+  ],
+  "horarios": [
+    // lista de horários
+  ],
+  "frequencias": [
+    // lista de frequências
+  ],
+  "dados_financeiros": [
+    // lista de dados financeiros
+  ],
+  "matriculas": [
+    // lista de matrículas
+  ],
+  "historico_chat": [
+    // histórico de chat
+  ]
 }
 ```
 
 ### Notas
 
-#### Listar Notas do Aluno
+#### Listar/Criar Notas
 
 ```
-GET /alunos/{id}/notas/
+GET /api/notas/
+POST /api/notas/
 ```
 
-**Parâmetros**
-- `id` (obrigatório): ID único do aluno
-- `disciplina` (opcional): Filtrar por disciplina
-- `semestre` (opcional): Filtrar por semestre
+**Filtros disponíveis**
+- `aluno`: ID do aluno
+- `disciplina`: Filtrar por disciplina
+- `semestre`: Filtrar por semestre
 
 **Resposta de Sucesso (200 OK)**
 ```json
 {
-  "notas": [
+  "count": 448,
+  "next": "http://localhost:8000/api/notas/?page=2",
+  "previous": null,
+  "results": [
     {
-      "id": 101,
-      "disciplina": "Matemática",
-      "nota_prova": 8.5,
-      "nota_trabalho": 9.0,
-      "nota_final": 8.7,
-      "data_avaliacao": "2023-06-10"
+      "id": 1,
+      "aluno": 1,
+      "aluno_nome": "Aluno Teste 1",
+      "disciplina": "Programação I",
+      "nota_prova": "8.50",
+      "nota_trabalho": "9.00",
+      "nota_final": "8.65",
+      "data_avaliacao": "2023-03-10",
+      "semestre": "2023.1",
+      "created_at": "2023-04-03T15:30:45Z",
+      "updated_at": "2023-04-03T15:30:45Z"
     },
-    {
-      "id": 102,
-      "disciplina": "Física",
-      "nota_prova": 7.0,
-      "nota_trabalho": 8.5,
-      "nota_final": 7.5,
-      "data_avaliacao": "2023-06-15"
-    }
+    // ...mais notas
   ]
 }
 ```
+
+#### Filtrar Notas por Aluno
+
+```
+GET /api/notas/por_aluno/?aluno_id={id}
+```
+
+**Parâmetros**
+- `aluno_id` (obrigatório): ID único do aluno
 
 ### Horários de Aulas
 
-#### Listar Horários do Aluno
+#### Listar/Criar Horários
 
 ```
-GET /alunos/{id}/horarios/
+GET /api/horarios/
+POST /api/horarios/
 ```
 
-**Parâmetros**
-- `id` (obrigatório): ID único do aluno
-- `dia_semana` (opcional): Filtrar por dia da semana
-- `disciplina` (opcional): Filtrar por disciplina
+**Filtros disponíveis**
+- `aluno`: ID do aluno
+- `dia_semana`: Filtrar por dia da semana (SEG, TER, QUA, QUI, SEX, SAB, DOM)
+- `semestre`: Filtrar por semestre
 
 **Resposta de Sucesso (200 OK)**
 ```json
 {
-  "horarios": [
+  "count": 224,
+  "next": "http://localhost:8000/api/horarios/?page=2",
+  "previous": null,
+  "results": [
     {
-      "id": 201,
-      "disciplina": "Matemática",
-      "dia_semana": "Segunda-feira",
-      "horario_inicio": "08:00",
-      "horario_fim": "10:00",
-      "sala": "Bloco A - Sala 101"
+      "id": 1,
+      "aluno": 1,
+      "aluno_nome": "Aluno Teste 1",
+      "disciplina": "Algoritmos e Estruturas de Dados",
+      "dia_semana": "SEG",
+      "dia_semana_display": "Segunda-feira",
+      "horario_inicio": "08:00:00",
+      "horario_fim": "10:00:00",
+      "sala": "A101",
+      "professor": "Dr. Silva",
+      "semestre": "2023.1",
+      "created_at": "2023-04-03T15:30:45Z",
+      "updated_at": "2023-04-03T15:30:45Z"
     },
-    {
-      "id": 202,
-      "disciplina": "Física",
-      "dia_semana": "Terça-feira",
-      "horario_inicio": "10:00",
-      "horario_fim": "12:00",
-      "sala": "Bloco B - Sala 203"
-    }
+    // ...mais horários
   ]
 }
 ```
+
+#### Filtrar Horários por Aluno
+
+```
+GET /api/horarios/por_aluno/?aluno_id={id}
+```
+
+**Parâmetros**
+- `aluno_id` (obrigatório): ID único do aluno
 
 ### Frequência
 
-#### Listar Registros de Frequência
+#### Listar/Criar Frequências
 
 ```
-GET /alunos/{id}/frequencia/
+GET /api/frequencias/
+POST /api/frequencias/
 ```
 
-**Parâmetros**
-- `id` (obrigatório): ID único do aluno
-- `disciplina` (opcional): Filtrar por disciplina
-- `periodo_inicio` (opcional): Data de início do período
-- `periodo_fim` (opcional): Data de fim do período
+**Filtros disponíveis**
+- `aluno`: ID do aluno
+- `disciplina`: Filtrar por disciplina
+- `status`: Filtrar por status (PRESENTE, AUSENTE, JUSTIFICADO)
+- `data`: Filtrar por data
 
 **Resposta de Sucesso (200 OK)**
 ```json
 {
-  "frequencia": [
+  "count": 3360,
+  "next": "http://localhost:8000/api/frequencias/?page=2",
+  "previous": null,
+  "results": [
     {
-      "id": 301,
-      "disciplina": "Matemática",
-      "data": "2023-05-22",
-      "status_presenca": "Presente"
+      "id": 1,
+      "aluno": 1,
+      "aluno_nome": "Aluno Teste 1",
+      "disciplina": "Algoritmos e Estruturas de Dados",
+      "data": "2023-03-20",
+      "status": "PRESENTE",
+      "status_display": "Presente",
+      "created_at": "2023-04-03T15:30:45Z",
+      "updated_at": "2023-04-03T15:30:45Z"
     },
-    {
-      "id": 302,
-      "disciplina": "Física",
-      "data": "2023-05-23",
-      "status_presenca": "Ausente"
-    }
-  ],
-  "resumo": {
-    "total_aulas": 20,
-    "presencas": 18,
-    "ausencias": 2,
-    "percentual_presenca": 90
-  }
-}
-```
-
-### Dados Financeiros
-
-#### Consultar Situação Financeira
-
-```
-GET /alunos/{id}/financeiro/
-```
-
-**Parâmetros**
-- `id` (obrigatório): ID único do aluno
-
-**Resposta de Sucesso (200 OK)**
-```json
-{
-  "mensalidades": [
-    {
-      "id": 401,
-      "valor": 1500.00,
-      "data_vencimento": "2023-05-10",
-      "status_pagamento": "Pago",
-      "data_pagamento": "2023-05-08",
-      "valor_pago": 1500.00
-    },
-    {
-      "id": 402,
-      "valor": 1500.00,
-      "data_vencimento": "2023-06-10",
-      "status_pagamento": "Pendente",
-      "data_pagamento": null,
-      "valor_pago": 0.00
-    }
-  ],
-  "resumo": {
-    "mensalidades_pagas": 5,
-    "mensalidades_pendentes": 1,
-    "valor_total_pendente": 1500.00
-  }
-}
-```
-
-### Matrículas
-
-#### Consultar Matrículas do Semestre
-
-```
-GET /alunos/{id}/matriculas/
-```
-
-**Parâmetros**
-- `id` (obrigatório): ID único do aluno
-- `semestre` (opcional): Filtrar por semestre
-
-**Resposta de Sucesso (200 OK)**
-```json
-{
-  "semestre": "2023.1",
-  "data_matricula": "2023-01-20",
-  "disciplinas": [
-    {
-      "id": 501,
-      "codigo": "MAT101",
-      "nome": "Matemática",
-      "creditos": 4,
-      "professor": "Dr. Roberto Santos",
-      "status": "Em andamento"
-    },
-    {
-      "id": 502,
-      "codigo": "FIS102",
-      "nome": "Física",
-      "creditos": 4,
-      "professor": "Dra. Maria Oliveira",
-      "status": "Em andamento"
-    }
+    // ...mais frequências
   ]
 }
 ```
 
-### Chat
-
-#### Enviar Pergunta
+#### Filtrar Frequências por Aluno
 
 ```
-POST /chat/perguntar/
-```
-
-**Corpo da Requisição**
-```json
-{
-  "aluno_id": 1,
-  "pergunta": "Qual foi minha nota em Matemática?"
-}
-```
-
-**Resposta de Sucesso (200 OK)**
-```json
-{
-  "id": 601,
-  "pergunta": "Qual foi minha nota em Matemática?",
-  "resposta": "Sua nota final na disciplina de Matemática foi 8.7, composta por 8.5 na prova e 9.0 no trabalho.",
-  "timestamp": "2023-06-20T14:30:45Z",
-  "dados_contextuais": {
-    "tipo": "nota",
-    "disciplina": "Matemática",
-    "nota_final": 8.7
-  }
-}
-```
-
-#### Listar Histórico de Chat
-
-```
-GET /alunos/{id}/chat/historico/
+GET /api/frequencias/por_aluno/?aluno_id={id}
 ```
 
 **Parâmetros**
-- `id` (obrigatório): ID único do aluno
-- `limite` (opcional): Número máximo de mensagens a retornar
-- `offset` (opcional): Offset para paginação
+- `aluno_id` (obrigatório): ID único do aluno
+
+### Dados Financeiros
+
+#### Listar/Criar Dados Financeiros
+
+```
+GET /api/financeiro/
+POST /api/financeiro/
+```
+
+**Filtros disponíveis**
+- `aluno`: ID do aluno
+- `status_pagamento`: Filtrar por status (PAGO, PENDENTE, ATRASADO, ISENTO)
 
 **Resposta de Sucesso (200 OK)**
 ```json
 {
-  "historico": [
+  "count": 300,
+  "next": "http://localhost:8000/api/financeiro/?page=2",
+  "previous": null,
+  "results": [
     {
-      "id": 601,
-      "pergunta": "Qual foi minha nota em Matemática?",
-      "resposta": "Sua nota final na disciplina de Matemática foi 8.7, composta por 8.5 na prova e 9.0 no trabalho.",
-      "timestamp": "2023-06-20T14:30:45Z"
+      "id": 1,
+      "aluno": 1,
+      "aluno_nome": "Aluno Teste 1",
+      "mensalidade": "950.00",
+      "data_vencimento": "2023-04-10",
+      "status_pagamento": "PENDENTE",
+      "status_pagamento_display": "Pendente",
+      "data_pagamento": null,
+      "valor_pago": null,
+      "descricao": "Mensalidade 4/2023",
+      "created_at": "2023-04-03T15:30:45Z",
+      "updated_at": "2023-04-03T15:30:45Z"
     },
-    {
-      "id": 602,
-      "pergunta": "Quando é minha aula de Física?",
-      "resposta": "Sua aula de Física acontece às terças-feiras, das 10:00 às 12:00, na sala 203 do Bloco B.",
-      "timestamp": "2023-06-20T14:31:30Z"
-    }
-  ],
-  "total": 2,
-  "limite": 10,
-  "offset": 0
+    // ...mais dados financeiros
+  ]
 }
 ```
+
+#### Filtrar Dados Financeiros por Aluno
+
+```
+GET /api/financeiro/por_aluno/?aluno_id={id}
+```
+
+**Parâmetros**
+- `aluno_id` (obrigatório): ID único do aluno
+
+### Matrículas
+
+#### Listar/Criar Matrículas
+
+```
+GET /api/matriculas/
+POST /api/matriculas/
+```
+
+**Filtros disponíveis**
+- `aluno`: ID do aluno
+- `semestre`: Filtrar por semestre
+
+**Resposta de Sucesso (200 OK)**
+```json
+{
+  "count": 100,
+  "next": "http://localhost:8000/api/matriculas/?page=2",
+  "previous": null,
+  "results": [
+    {
+      "id": 1,
+      "aluno": 1,
+      "aluno_nome": "Aluno Teste 1",
+      "semestre": "2023.1",
+      "data_matricula": "2023-01-15",
+      "disciplinas": [
+        // lista de disciplinas matriculadas
+      ],
+      "created_at": "2023-04-03T15:30:45Z",
+      "updated_at": "2023-04-03T15:30:45Z"
+    },
+    // ...mais matrículas
+  ]
+}
+```
+
+#### Filtrar Matrículas por Aluno
+
+```
+GET /api/matriculas/por_aluno/?aluno_id={id}
+```
+
+**Parâmetros**
+- `aluno_id` (obrigatório): ID único do aluno
+
+### Disciplinas Matriculadas
+
+#### Listar/Criar Disciplinas Matriculadas
+
+```
+GET /api/disciplinas-matriculadas/
+POST /api/disciplinas-matriculadas/
+```
+
+**Filtros disponíveis**
+- `matricula`: ID da matrícula
+- `status`: Filtrar por status (EM_ANDAMENTO, APROVADO, REPROVADO, TRANCADO)
+
+**Resposta de Sucesso (200 OK)**
+```json
+{
+  "count": 518,
+  "next": "http://localhost:8000/api/disciplinas-matriculadas/?page=2",
+  "previous": null,
+  "results": [
+    {
+      "id": 1,
+      "matricula": 1,
+      "codigo": "CC001",
+      "nome": "Algoritmos e Estruturas de Dados I",
+      "creditos": 4,
+      "professor": "Dr. Silva",
+      "status": "EM_ANDAMENTO",
+      "status_display": "Em andamento",
+      "created_at": "2023-04-03T15:30:45Z",
+      "updated_at": "2023-04-03T15:30:45Z"
+    },
+    // ...mais disciplinas
+  ]
+}
+```
+
+#### Filtrar Disciplinas por Matrícula
+
+```
+GET /api/disciplinas-matriculadas/por_matricula/?matricula_id={id}
+```
+
+**Parâmetros**
+- `matricula_id` (obrigatório): ID único da matrícula
+
+### Histórico de Chat
+
+#### Listar/Criar Histórico de Chat
+
+```
+GET /api/chat-historico/
+POST /api/chat-historico/
+```
+
+**Filtros disponíveis**
+- `aluno`: ID do aluno
+
+**Resposta de Sucesso (200 OK)**
+```json
+{
+  "count": 306,
+  "next": "http://localhost:8000/api/chat-historico/?page=2",
+  "previous": null,
+  "results": [
+    {
+      "id": 1,
+      "aluno": 1,
+      "aluno_nome": "Aluno Teste 1",
+      "pergunta": "Qual é o horário da disciplina de Banco de Dados?",
+      "resposta": "Suas aulas de Banco de Dados são às terças-feiras, das 19:00 às 21:00, na sala B201.",
+      "timestamp": "2023-04-03T14:30:45Z",
+      "dados_contextuais": {
+        "intenção": "consulta_horario",
+        "confiança": 0.95,
+        "entidades_identificadas": 2
+      }
+    },
+    // ...mais históricos
+  ]
+}
+```
+
+#### Filtrar Histórico por Aluno
+
+```
+GET /api/chat-historico/por_aluno/?aluno_id={id}
+```
+
+**Parâmetros**
+- `aluno_id` (obrigatório): ID único do aluno
+
+## Paginação
+
+A API utiliza paginação por padrão com 10 itens por página. Você pode controlar a paginação com os seguintes parâmetros:
+
+```
+GET /api/alunos/?page=2
+```
+
+A resposta inclui metadados de paginação:
+
+```json
+{
+  "count": 50,        // Total de itens
+  "next": "http://localhost:8000/api/alunos/?page=3",   // URL da próxima página
+  "previous": "http://localhost:8000/api/alunos/?page=1", // URL da página anterior
+  "results": [...]   // Itens da página atual
+}
+```
+
+## Filtragem, Busca e Ordenação
+
+A API suporta:
+
+1. **Filtragem**: Use parâmetros de consulta para filtrar resultados
+   ```
+   GET /api/alunos/?curso=Ciência da Computação
+   ```
+
+2. **Busca**: Use o parâmetro `search` para buscar em campos específicos
+   ```
+   GET /api/alunos/?search=Silva
+   ```
+
+3. **Ordenação**: Use o parâmetro `ordering` para ordenar resultados
+   ```
+   GET /api/notas/?ordering=-nota_final  // Ordem decrescente
+   GET /api/alunos/?ordering=nome        // Ordem crescente
+   ```
 
 ## Códigos de Status
 
 - 200 OK: Requisição bem-sucedida
+- 201 Created: Recurso criado com sucesso
+- 204 No Content: Recurso excluído com sucesso
 - 400 Bad Request: Requisição mal formatada
 - 401 Unauthorized: Autenticação necessária
 - 403 Forbidden: Sem permissão para acessar o recurso
 - 404 Not Found: Recurso não encontrado
 - 500 Internal Server Error: Erro interno do servidor
 
-## Paginação
-
-Para endpoints que retornam coleções grandes de dados, a paginação será implementada usando os parâmetros `limite` e `offset`:
-
-```
-GET /alunos/{id}/notas/?limite=10&offset=0
-```
-
-A resposta incluirá metadados de paginação:
-
-```json
-{
-  "notas": [...],
-  "total": 25,
-  "limite": 10,
-  "offset": 0
-}
-```
-
-## Versionamento
-
-A API será versionada no caminho da URL. A versão inicial será a v1:
-
-```
-/api/v1/alunos/
-```
-
-## Considerações Futuras
+## Próximos Passos
 
 - Implementação de autenticação JWT
-- Cache de resposta para melhorar performance
-- WebSockets para comunicação em tempo real
-- Endpoints para feedback sobre qualidade das respostas
-- API para administração e manutenção dos dados 
+- Endpoints para integração com LLM
+- API de feedback sobre respostas do chat
+- Cache para melhorar performance
+- WebSockets para comunicação em tempo real 
