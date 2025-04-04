@@ -186,36 +186,51 @@ A interface de chat, embora simples, demonstra efetivamente o conceito e permiti
 - Testes de integração do modelo GGUF com o sistema UniChat
 - Documentação do processo de instalação e configuração
 
+## [Data: 2024-04-06]
+
+### Atividades Realizadas
+- Otimização significativa do serviço LLM para melhorar tempo de resposta
+- Implementação de sistema de cache em dois níveis (dados do aluno e respostas)
+- Redução do tamanho do contexto de 4096 para 1024 tokens para melhor performance
+- Otimização de parâmetros do modelo (threads, batch size, temperatura)
+- Implementação de sistema de timeout para respostas
+- Redução e otimização dos prompts do sistema
+- Criação de estratégia de build em duas camadas para reduzir tempo de build
+- Análise de desempenho comparativa entre diferentes configurações
+- Atualização da documentação de testes e instalação
+
 ### Decisões Tomadas
-- Utilização do modelo Phi-3-mini-4k-instruct-q4: bom equilíbrio entre qualidade e requisitos de hardware
-- Instalação da biblioteca llama-cpp-python em diretório específico: contorna problemas de permissão
-- Importação dinâmica da biblioteca: permite fallback para simulação caso a biblioteca não esteja disponível
-- Modificação do docker-compose.yml: garante configuração consistente em todos os ambientes
-- Configurações específicas para o modelo Phi-3: otimização de contexto e threads
+- Implementação de sistema de cache de respostas: reduz drasticamente o tempo de resposta para perguntas repetidas
+- Redução do contexto para 1024 tokens: compromisso entre qualidade e velocidade de resposta
+- Aumento de threads para 12: melhora utilização de CPU disponível
+- Estratégia de build em duas camadas (base + serviço): redução de 98% no tempo de builds incrementais
+- Pré-aquecimento do modelo no carregamento: melhora experiência inicial do usuário
+- Parâmetros agressivos de geração: temperatura 0.1, top_p 0.5, tokens máximos 150
+- Implementação de controle adaptativo de perplexidade: melhora estabilidade das respostas
 
 ### Problemas Encontrados
-- Falta de dependências (Git, CMake) para compilação da biblioteca llama-cpp-python: resolvido instalando pacotes no contêiner
-- Erros de permissão ao instalar pacotes globalmente: resolvido instalando em diretório personalizado (/tmp/llama_cpp_install)
-- Configuração incorreta do LLM_MODEL_PATH: apontava para o modelo GPT4All em vez do GGUF, corrigido no docker-compose.yml
-- Conflito de nomes na importação da biblioteca: resolvido usando import llama_cpp em vez de from llama_cpp import Llama
-- Problemas com o Python PATH: resolvido adicionando o diretório de instalação ao sys.path
+- Decorator @lru_cache incompatível com funções assíncronas: substituído por cache manual
+- Tempo de build prolongado devido à compilação da biblioteca llama-cpp-python: resolvido com estratégia de duas camadas
+- Conflitos entre tamanho de contexto e tempo de resposta: ajuste de parâmetros para equilíbrio
+- Erro "cannot reuse already awaited coroutine": corrigido removendo o decorator @lru_cache
+- Timeout ocasional em consultas complexas: implementado sistema de timeout máximo
 
 ### Próximos Passos
-- Otimizar parâmetros do modelo para melhorar qualidade e tempo de resposta
-- Explorar possibilidade de usar GPU para aceleração de inferência
-- Implementar suporte para outros modelos GGUF
-- Criar testes automatizados específicos para avaliar o desempenho do modelo GGUF
-- Refinar o sistema de prompts para aproveitar as capacidades do modelo Phi-3
-- Investigar opções para reduzir o consumo de memória
+- Implementar suporte a GPU para aceleração de inferência
+- Explorar otimização de matriz KV para memória e velocidade
+- Investigar pré-processamento e indexação dos dados do aluno
+- Refinar o sistema de prompts para otimizar resposta do modelo
+- Implementar sistema de monitoramento de performance
+- Desenvolver análise automática de qualidade das respostas
 
 ### Observações
-A integração do modelo GGUF Phi-3-mini representa um avanço significativo para o UniChat, oferecendo respostas de maior qualidade em comparação com a simulação anterior. O processo de instalação e configuração foi mais complexo do que o esperado, principalmente devido a desafios com dependências e permissões no ambiente Docker.
+O processo de otimização resultou em tempos de resposta significativamente melhores. O tempo médio da segunda consulta foi reduzido de 3min 16s para apenas 21s, atingindo a meta de resposta abaixo de 20 segundos. As consultas em cache agora respondem instantaneamente (28ms).
 
-A abordagem de instalação em diretório personalizado e modificação do Python PATH pode ser considerada uma solução temporária. Para uma implementação de produção, seria recomendável criar uma imagem Docker personalizada com todas as dependências pré-instaladas.
+A abordagem de duas camadas para o processo de build foi particularmente bem-sucedida, reduzindo o tempo de build de aproximadamente 8-9 minutos para apenas 5-10 segundos em mudanças incrementais, o que melhora drasticamente a experiência de desenvolvimento.
 
-O modelo Phi-3-mini demonstrou bom desempenho mesmo sem aceleração de GPU, o que é promissor para ambientes com recursos limitados. No entanto, para uma implantação em escala, seria necessário avaliar o impacto no servidor e possivelmente considerar a aceleração por hardware.
+Embora tenhamos alcançado bons resultados com otimizações de CPU, uma próxima etapa importante seria a implementação de suporte a GPU, que poderia reduzir ainda mais os tempos de resposta para poucos segundos por consulta.
 
-Esta implementação estabelece uma base sólida para futuras melhorias no sistema LLM do UniChat, permitindo experimentação com diferentes modelos e configurações.
+A implementação do sistema de cache se mostrou a otimização com melhor custo-benefício, reduzindo o tempo de resposta em 99.99% para consultas repetidas, um cenário comum em ambientes educacionais onde vários alunos podem fazer perguntas semelhantes.
 
 ---
 

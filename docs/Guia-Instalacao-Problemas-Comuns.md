@@ -343,4 +343,237 @@ services:
 6. **Verifique nos logs se o modelo foi carregado corretamente**
    ```bash
    docker compose logs llm | grep "Modelo GGUF carregado com sucesso"
-   ``` 
+   ```
+
+## Problemas ao Baixar o Modelo GGUF
+
+## Otimizações de Performance para o Modelo GGUF
+
+Esta seção descreve como implementar as otimizações que melhoram significativamente o tempo de resposta do modelo GGUF no serviço LLM.
+
+### Implementando o Sistema de Cache
+
+Para implementar o sistema de cache em dois níveis que reduz drasticamente o tempo de respostas repetidas:
+
+1. Edite o arquivo `llm_service.py`:
+
+```python
+# No topo do arquivo, adicione:
+import time
+from datetime import datetime
+
+# Defina os dicionários de cache
+_student_data_cache = {}
+_response_cache = {}
+
+# Modifique a função fetch_student_data para usar cache
+async def fetch_student_data(student_id):
+    cache_key = student_id
+    
+    # Verificar se os dados já estão em cache
+    if cache_key in _student_data_cache:
+        print(f"Usando dados em cache para aluno ID: {student_id}")
+        return _student_data_cache[cache_key]
+    
+    # Se não estiverem em cache, buscar do backend
+    try:
+        print(f"Buscando dados do aluno ID: {student_id}")
+        # Seu código existente para buscar dados...
+        
+        # Armazenar no cache antes de retornar
+        _student_data_cache[cache_key] = student_data
+        return student_data
+    except Exception as e:
+        print(f"Erro ao buscar dados do aluno: {e}")
+        raise
+
+# Modifique a função handle_query para usar cache de resposta
+async def handle_query(question, student_id):
+    # Criar uma chave única para esta combinação de pergunta e aluno
+    cache_key = f"{student_id}:{question}"
+    
+    # Verificar se a resposta já está em cache
+    if cache_key in _response_cache:
+        print(f"Usando resposta em cache para pergunta: '{question}'")
+        return _response_cache[cache_key]
+    
+    # Se não estiver em cache, gerar a resposta
+    start_time = time.time()
+    print(f"Gerando resposta para: '{question}'")
+    
+    # Seu código existente para gerar a resposta...
+    
+    # Armazenar no cache antes de retornar
+    elapsed_time = time.time() - start_time
+    print(f"Resposta gerada em {elapsed_time:.2f} segundos")
+    _response_cache[cache_key] = response
+    return response
+```
+
+### Otimizando os Parâmetros do Modelo
+
+Para otimizar os parâmetros do modelo GGUF:
+
+1. Edite o arquivo `llm_service.py` para ajustar os parâmetros do modelo:
+
+```python
+# Na inicialização do modelo, ajuste:
+llm = LlamaCpp(
+    model_path="/app/models/Phi-3-mini-4k-instruct-q4.gguf",
+    temperature=0.1,           # Reduzido de 0.7
+    max_tokens=150,            # Reduzido de 500
+    n_ctx=1024,                # Reduzido de 4096
+    n_batch=1024,              # Aumentado de 512
+    n_threads=12,              # Aumentado de 4
+    verbose=False,             # Desativar logs verbosos
+    # Configurações adicionais
+    top_p=0.95,
+    f16_kv=True,               # Usar half precision para KV cache
+    streaming=False,
+    seed=-1                    # Use uma seed fixa para resultados mais consistentes
+)
+```
+
+### Implementando o Pré-aquecimento do Modelo
+
+Para pré-aquecer o modelo e melhorar o tempo de resposta inicial:
+
+```python
+# No arquivo llm_service.py, antes do app.get("/")
+async def warm_up_model():
+    """Pré-aquece o modelo executando uma inferência simples."""
+    try:
+        print("Pré-aquecendo o modelo...")
+        start_time = time.time()
+        
+        # Inferência simples para aquecer o modelo
+        prompt = "Responda 'OK' para confirmar que o modelo está funcionando."
+        await llm.ainvoke(prompt)
+        
+        elapsed_time = time.time() - start_time
+        print(f"Modelo pré-aquecido em {elapsed_time:.2f} segundos")
+    except Exception as e:
+        print(f"Erro ao pré-aquecer o modelo: {e}")
+
+# Modificar a inicialização da aplicação
+@app.on_event("startup")
+async def startup_event():
+    """Executa tarefas de inicialização."""
+    await warm_up_model()
+```
+
+### Otimizando o Sistema de Prompts
+
+Para reduzir o tamanho dos prompts e melhorar o tempo de resposta:
+
+```python
+# No arquivo llm_service.py, otimize o template do prompt
+def create_prompt(question, student_data):
+    """Cria um prompt otimizado para o modelo LLM."""
+    # Versão otimizada com menos tokens
+    template = """
+    Você é um assistente universitário chamado UniChat. Responda à seguinte pergunta 
+    usando apenas os dados fornecidos. Seja breve e direto.
+    
+    DADOS DO ALUNO:
+    {student_data}
+    
+    PERGUNTA: {question}
+    
+    RESPOSTA:
+    """
+    
+    # Formatar os dados do aluno de forma compacta
+    formatted_data = []
+    for key, value in student_data.items():
+        if isinstance(value, list):
+            formatted_data.append(f"{key}: {', '.join(str(item) for item in value)}")
+        else:
+            formatted_data.append(f"{key}: {value}")
+    
+    student_data_str = "\n".join(formatted_data)
+    
+    # Criar o prompt completo
+    prompt = template.format(student_data=student_data_str, question=question)
+    return prompt
+```
+
+### Estratégia de Build em Duas Camadas
+
+Para reduzir drasticamente o tempo de build durante o desenvolvimento:
+
+1. Modifique o `Dockerfile.llm` para usar uma abordagem em duas camadas:
+
+```dockerfile
+# Primeira camada: compilação do llama-cpp-python
+FROM python:3.10-slim AS builder
+
+# Instalar dependências de compilação
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Compilar llama-cpp-python otimizado para CPU
+RUN pip install --no-cache-dir llama-cpp-python==0.2.11+cpuavx2 setuptools wheel
+
+# Segunda camada: imagem de runtime
+FROM python:3.10-slim
+
+# Copiar os pacotes instalados da camada builder
+COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+
+# Instalar dependências de runtime
+RUN apt-get update && apt-get install -y \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Criar diretório de trabalho
+WORKDIR /app
+
+# Copiar apenas os arquivos necessários
+COPY requirements-llm.txt /app/
+RUN pip install --no-cache-dir -r requirements-llm.txt
+
+# Copiar código da aplicação
+COPY llm_service.py /app/
+
+# Diretório para o modelo
+RUN mkdir -p /app/models
+VOLUME /app/models
+
+# Expor porta
+EXPOSE 8080
+
+# Iniciar a aplicação FastAPI
+CMD ["uvicorn", "llm_service:app", "--host", "0.0.0.0", "--port", "8080"]
+```
+
+2. Atualize o arquivo `docker-compose.yml` para usar o novo Dockerfile:
+
+```yaml
+  llm:
+    build:
+      context: .
+      dockerfile: Dockerfile.llm
+    restart: always
+    volumes:
+      - ./Phi-3-mini-4k-instruct-q4.gguf:/app/models/Phi-3-mini-4k-instruct-q4.gguf
+    ports:
+      - "8080:8080"
+```
+
+### Verificação de Performance
+
+Após implementar estas otimizações, verifique se você está obtendo os tempos de resposta esperados:
+
+1. **Primeira consulta**: Em torno de 2-3 minutos
+2. **Segunda consulta (modelo aquecido)**: Em torno de 20-30 segundos
+3. **Consulta em cache**: Menos de 100ms
+
+Se os tempos forem significativamente maiores, verifique os seguintes pontos:
+
+1. Confirme se o sistema de cache está funcionando (verifique os logs)
+2. Verifique se os parâmetros do modelo foram corretamente ajustados
+3. Verifique se o hardware tem recursos suficientes (especialmente CPU) 

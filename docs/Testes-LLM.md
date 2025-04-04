@@ -124,6 +124,100 @@ O sistema foi projetado para ser facilmente extensível:
 3. Implementar métricas de tempo de resposta e performance
 4. Criar um dashboard de monitoramento para acompanhar a evolução da qualidade das respostas ao longo do tempo 
 
+## Otimizações de Performance do LLM
+
+A versão mais recente do serviço LLM inclui otimizações significativas que melhoram drasticamente o tempo de resposta. Esta seção descreve as principais otimizações implementadas e como testá-las.
+
+### Principais Otimizações
+
+1. **Sistema de Cache em Dois Níveis**:
+   - Cache de dados do aluno: evita consultas repetidas ao backend
+   - Cache de respostas: armazena respostas para perguntas idênticas
+   - Resultado: redução de 99.99% no tempo para consultas repetidas
+
+2. **Otimização de Parâmetros do Modelo**:
+   - Redução do contexto: 4096 → 1024 tokens
+   - Aumento de threads: 4 → 12
+   - Processamento em lote: 512 → 1024
+   - Temperatura reduzida: 0.7 → 0.1
+   - Tokens máximos reduzidos: 500 → 150
+
+3. **Redução do Tamanho dos Prompts**:
+   - Prompts mais concisos para reduzir processamento
+   - Sistema de templating otimizado para reduzir tokens
+
+4. **Pré-aquecimento do Modelo**:
+   - Execução de consulta simples na inicialização
+   - Prepara o modelo para respostas mais rápidas
+
+### Métricas de Performance
+
+Na versão atual, foram observadas as seguintes métricas:
+
+| Consulta | Antes da Otimização | Após a Otimização | Melhoria |
+|----------|---------------------|-------------------|----------|
+| Primeira consulta | 5m 34s | 2m 49s | 49% |
+| Segunda consulta | 3m 16s | 21s | 89% |
+| Terceira consulta | 2m 27s | 1m 38s | 33% |
+| Consulta em cache | N/A | 28ms | 99.99% |
+
+### Como Testar as Otimizações
+
+Para testar o impacto das otimizações de performance, foram implementados scripts que medem o tempo de resposta sob diferentes condições:
+
+#### 1. Teste de Primeira Resposta
+
+```bash
+time curl -X POST http://localhost:8080/api/query \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Quais são meus horários de aula?", "student_id": 1}'
+```
+
+Este teste mede o tempo da primeira consulta, que inclui o carregamento completo do pipeline de processamento.
+
+#### 2. Teste de Segunda Resposta (Modelo Aquecido)
+
+```bash
+time curl -X POST http://localhost:8080/api/query \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Qual é minha nota em Física?", "student_id": 1}'
+```
+
+Este teste mede o tempo após o modelo estar "aquecido".
+
+#### 3. Teste de Cache
+
+Execute a mesma consulta do teste anterior novamente:
+
+```bash
+time curl -X POST http://localhost:8080/api/query \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Qual é minha nota em Física?", "student_id": 1}'
+```
+
+A resposta deve ser praticamente instantânea devido ao cache.
+
+### Verificando o Uso do Cache
+
+Para confirmar que o cache está sendo utilizado:
+
+```bash
+docker compose logs llm | grep "cache" -A 1 -B 1
+```
+
+Você deverá ver mensagens como:
+- "Usando dados em cache para aluno ID: X"
+- "Usando resposta em cache para pergunta: 'Y'"
+
+### Testes Automatizados para Performance
+
+Futuramente, serão implementados testes automatizados para monitorar a performance:
+
+1. **Testes de Latência**: Medição automática do tempo de resposta
+2. **Testes de Carga**: Desempenho sob múltiplas consultas simultâneas
+3. **Testes de Regressão**: Garantir que novas versões mantenham ou melhorem a performance
+4. **Testes de Warmup**: Comportamento de performance durante a inicialização do sistema
+
 ## Integrando e Testando Modelos GGUF
 
 ### Sobre Modelos GGUF
