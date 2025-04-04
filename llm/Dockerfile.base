@@ -1,0 +1,48 @@
+FROM python:3.10-slim
+
+# Instala pacotes essenciais
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    g++ \
+    curl \
+    wget \
+    git \
+    cmake \
+    libopenblas-dev \
+    python3-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Define variáveis de ambiente para otimização
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS -DCMAKE_C_FLAGS=-march=native -DCMAKE_CXX_FLAGS=-march=native" \
+    FORCE_CMAKE=1
+
+# Instala dependências Python comuns, divididas em etapas para melhor uso do cache
+# 1. Instala dependências menos propensas a mudanças
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir \
+    fastapi==0.100.0 \
+    uvicorn==0.22.0 \
+    python-dotenv==1.0.0 \
+    pydantic==2.0.3 \
+    requests==2.31.0
+
+# 2. Instala dependências de LLM
+RUN pip install --no-cache-dir \
+    langchain==0.1.0 \
+    langchain-community==0.0.11 \
+    gpt4all==0.1.7 \
+    chromadb==0.4.15
+
+# 3. Instala llama-cpp-python com otimizações específicas
+RUN pip install --no-cache-dir llama-cpp-python --verbose
+
+# Cria e configura diretórios para modelos
+RUN mkdir -p /app/models && chmod 777 /app/models
+
+# Define workdir padrão
+WORKDIR /app 
