@@ -55,3 +55,7 @@ ENV/
 # Sistema
 .DS_Store
 Thumbs.db
+
+# Relatórios de testes LLM
+backend/relatorios_llm/
+relatorios_llm/

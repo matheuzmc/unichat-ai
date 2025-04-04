@@ -29,6 +29,47 @@ Quaisquer observações adicionais, insights ou ideias para o futuro.
 
 ## Entradas do Diário
 
+## [Data: 2024-04-04]
+
+### Atividades Realizadas
+- Implementação de sistema de testes automatizados para o serviço LLM
+- Criação de dois comandos personalizados Django para testes: básico e avançado
+- Implementação de biblioteca de casos de teste predefinidos
+- Desenvolvimento de sistema de relatórios em CSV e visualizações gráficas
+- Implementação de testes para diferentes categorias de consultas
+- Criação de testes específicos para capacidades avançadas do LLM
+- Documentação detalhada dos testes e comandos
+- Atualização dos requisitos do projeto para incluir bibliotecas de visualização
+
+### Decisões Tomadas
+- Estruturação de testes por categorias de consulta: facilita a identificação de áreas problemáticas
+- Implementação de testes de conversação com contexto: simula cenários reais de uso
+- Geração de relatórios visuais com matplotlib: facilita interpretação dos resultados
+- Separação entre testes básicos e avançados: oferece flexibilidade na execução
+- Configuração de atraso entre requisições aos testes: evita sobrecarga do serviço LLM
+- Criação de diretório específico para relatórios: melhor organização dos resultados
+
+### Problemas Encontrados
+- Módulo requests não disponível no contêiner: resolvido adicionando-o ao requirements.txt
+- Bibliotecas pandas, numpy e matplotlib ausentes: adicionadas ao requirements.txt
+- Erro na importação de modelos inexistentes (Professor e Avaliacao): corrigido removendo-os da importação
+- Problemas de permissão ao instalar pacotes no contêiner: resolvido reconstruindo o contêiner
+
+### Próximos Passos
+- Refinar os casos de teste com base nos resultados iniciais
+- Implementar avaliação semântica das respostas
+- Desenvolver dashboard para monitoramento contínuo da qualidade
+- Adicionar testes de robustez para consultas mal-formadas
+- Implementar métricas de tempo de resposta
+- Integrar testes automatizados ao pipeline CI/CD
+
+### Observações
+A implementação do sistema de testes automatizados representa um avanço significativo na garantia de qualidade do UniChat. O sistema agora permite uma avaliação objetiva e sistemática das respostas do LLM, facilitando a identificação de áreas que precisam de melhorias.
+
+A taxa de sucesso inicial é baixa (cerca de 6%), o que era esperado considerando que o serviço LLM está em estágio inicial de desenvolvimento. Estes testes agora fornecem uma linha de base clara para medir o progresso futuro.
+
+Os relatórios visuais e as métricas implementadas serão valiosos para comunicar o progresso aos stakeholders e guiar o desenvolvimento futuro do serviço LLM. A estrutura modular dos testes também permitirá fácil expansão à medida que novos requisitos surgirem.
+
 ## [Data: 2023-04-03]
 
 ### Atividades Realizadas
