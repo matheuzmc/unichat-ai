@@ -175,6 +175,48 @@ A implementação do MVP avançou significativamente, com uma arquitetura funcio
 
 A interface de chat, embora simples, demonstra efetivamente o conceito e permitirá validar a utilidade do sistema com usuários reais. O próximo foco deve ser na melhoria da qualidade das respostas e na expansão das funcionalidades de acordo com o feedback dos usuários.
 
+## [Data: 2024-04-05]
+
+### Atividades Realizadas
+- Integração do modelo GGUF Phi-3-mini-4k-instruct-q4 ao serviço LLM
+- Instalação e configuração da biblioteca llama-cpp-python no contêiner LLM
+- Resolução de problemas de permissão e dependências no contêiner Docker
+- Modificação do código do serviço LLM para suportar modelos GGUF
+- Atualização do docker-compose.yml para configurar o caminho correto do modelo
+- Testes de integração do modelo GGUF com o sistema UniChat
+- Documentação do processo de instalação e configuração
+
+### Decisões Tomadas
+- Utilização do modelo Phi-3-mini-4k-instruct-q4: bom equilíbrio entre qualidade e requisitos de hardware
+- Instalação da biblioteca llama-cpp-python em diretório específico: contorna problemas de permissão
+- Importação dinâmica da biblioteca: permite fallback para simulação caso a biblioteca não esteja disponível
+- Modificação do docker-compose.yml: garante configuração consistente em todos os ambientes
+- Configurações específicas para o modelo Phi-3: otimização de contexto e threads
+
+### Problemas Encontrados
+- Falta de dependências (Git, CMake) para compilação da biblioteca llama-cpp-python: resolvido instalando pacotes no contêiner
+- Erros de permissão ao instalar pacotes globalmente: resolvido instalando em diretório personalizado (/tmp/llama_cpp_install)
+- Configuração incorreta do LLM_MODEL_PATH: apontava para o modelo GPT4All em vez do GGUF, corrigido no docker-compose.yml
+- Conflito de nomes na importação da biblioteca: resolvido usando import llama_cpp em vez de from llama_cpp import Llama
+- Problemas com o Python PATH: resolvido adicionando o diretório de instalação ao sys.path
+
+### Próximos Passos
+- Otimizar parâmetros do modelo para melhorar qualidade e tempo de resposta
+- Explorar possibilidade de usar GPU para aceleração de inferência
+- Implementar suporte para outros modelos GGUF
+- Criar testes automatizados específicos para avaliar o desempenho do modelo GGUF
+- Refinar o sistema de prompts para aproveitar as capacidades do modelo Phi-3
+- Investigar opções para reduzir o consumo de memória
+
+### Observações
+A integração do modelo GGUF Phi-3-mini representa um avanço significativo para o UniChat, oferecendo respostas de maior qualidade em comparação com a simulação anterior. O processo de instalação e configuração foi mais complexo do que o esperado, principalmente devido a desafios com dependências e permissões no ambiente Docker.
+
+A abordagem de instalação em diretório personalizado e modificação do Python PATH pode ser considerada uma solução temporária. Para uma implementação de produção, seria recomendável criar uma imagem Docker personalizada com todas as dependências pré-instaladas.
+
+O modelo Phi-3-mini demonstrou bom desempenho mesmo sem aceleração de GPU, o que é promissor para ambientes com recursos limitados. No entanto, para uma implantação em escala, seria necessário avaliar o impacto no servidor e possivelmente considerar a aceleração por hardware.
+
+Esta implementação estabelece uma base sólida para futuras melhorias no sistema LLM do UniChat, permitindo experimentação com diferentes modelos e configurações.
+
 ---
 
 <!-- Novas entradas serão adicionadas acima desta linha --> 

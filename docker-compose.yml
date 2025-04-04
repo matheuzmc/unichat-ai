@@ -1,4 +1,3 @@
-
 services:
   db:
     image: postgres:14
@@ -50,13 +49,15 @@ services:
   llm:
     build: ./llm
     container_name: unichat-llm
-    user: "${UID}:${GID}"  # Mantenha esta linha
+    user: "${UID}:${GID}"
     volumes:
       - ./llm:/app
+      - llm_models:/app/models
     ports:
       - "8080:8080"
     environment:
-      - LLM_MODEL_PATH=/app/models/model.bin
+      - LLM_MODEL_PATH=/app/models/Phi-3-mini-4k-instruct-q4.gguf
+      - LLM_MODEL_URL=https://huggingface.co/mradermacher/ggml-gpt4all-j-v1.3-groovy/resolve/main/ggml-gpt4all-j-v1.3-groovy.bin
     restart: always
     networks:
       - unichat-network
@@ -80,3 +81,4 @@ networks:
 volumes:
   postgres_data:
   frontend_node_modules:
+  llm_models:

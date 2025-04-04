@@ -178,3 +178,169 @@ docker compose up -d
 ```
 
 O argumento `-v` remove os volumes, útil quando você quer um estado completamente novo. 
+
+## Problemas com o Serviço LLM
+
+### Problema: Instalação da Biblioteca llama-cpp-python
+
+**Sintoma:**
+Erro ao instalar ou importar a biblioteca llama-cpp-python, necessária para modelos GGUF.
+
+**Solução 1: Instalação em Diretório Personalizado**
+```bash
+docker exec -it unichat-llm bash -c "mkdir -p /tmp/llama_cpp_install && export CMAKE_ARGS='-DGGML_CUDA=OFF' && pip install llama-cpp-python==0.2.79 --no-cache-dir --force-reinstall --target=/tmp/llama_cpp_install"
+```
+
+Depois, adicione este diretório ao Python PATH no início do arquivo `llm/app/llm_service.py`:
+```python
+import sys
+sys.path.insert(0, '/tmp/llama_cpp_install')
+```
+
+**Solução 2: Instalação com Dependências Específicas**
+Se a solução 1 não funcionar, tente adicionar as dependências necessárias no Dockerfile do LLM:
+```Dockerfile
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    git \
+    cmake \
+    build-essential \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+```
+
+### Problema: Erro na Importação de Módulos
+
+**Sintoma:**
+Erro como: `NameError: name 'llama_cpp' is not defined`
+
+**Solução:**
+Use a importação correta no arquivo `llm/app/llm_service.py`:
+```python
+try:
+    import llama_cpp
+    has_llama_cpp = True
+    logger.info("llama-cpp-python importado com sucesso!")
+except ImportError:
+    logger.warning("llama-cpp-python não está disponível. O modelo GGUF não será utilizado.")
+    has_llama_cpp = False
+```
+
+E quando for instanciar o modelo, use:
+```python
+llm_gguf = llama_cpp.Llama(
+    model_path=model_path,
+    n_ctx=4096,
+    n_threads=4
+)
+```
+
+### Problema: Modelo GGUF Não Está Sendo Utilizado
+
+**Sintoma:**
+O sistema continua usando o modo de simulação mesmo com o modelo GGUF disponível.
+
+**Solução:**
+Verifique a configuração do `LLM_MODEL_PATH` no arquivo `docker-compose.yml`:
+```yaml
+environment:
+  - LLM_MODEL_PATH=/app/models/Phi-3-mini-4k-instruct-q4.gguf
+```
+
+E verifique se as verificações de tipo de arquivo estão corretas no código:
+```python
+is_gguf = model_path.endswith('.gguf')
+if is_gguf and has_llama_cpp:
+    # Carregar modelo GGUF
+```
+
+### Problema: Erro ao Carregar Modelo GGUF
+
+**Sintoma:**
+Erro como: `libllama.so: cannot open shared object file: No such file or directory`
+
+**Solução:**
+Este erro geralmente indica problemas com as dependências nativas. Tente reconstruir a imagem LLM com as configurações corretas:
+
+```bash
+docker compose build --no-cache llm
+docker compose up -d llm
+```
+
+### Problema: Versão Incompatível de llama-cpp-python
+
+**Sintoma:**
+Erros de incompatibilidade de versão ou métodos não encontrados.
+
+**Solução:**
+Use uma versão específica que sabemos funcionar:
+```bash
+docker exec -it unichat-llm pip install llama-cpp-python==0.2.79 --no-cache-dir --force-reinstall
+```
+
+### Problema: Erro de Permissão ao Acessar Modelo GGUF
+
+**Sintoma:**
+Erro de permissão ao tentar ler o arquivo do modelo.
+
+**Solução:**
+Ajuste as permissões do arquivo de modelo:
+```bash
+sudo chmod 644 llm/models/Phi-3-mini-4k-instruct-q4.gguf
+```
+
+Ou reconstrua o contêiner com a configuração correta de usuário:
+```yaml
+services:
+  llm:
+    user: "${UID}:${GID}"
+```
+
+## Instalação do Modelo GGUF (Passo a Passo)
+
+1. **Baixe o modelo GGUF**
+   ```bash
+   # Crie o diretório para modelos
+   mkdir -p llm/models
+   
+   # Baixe o modelo (exemplo com wget)
+   wget -O llm/models/Phi-3-mini-4k-instruct-q4.gguf https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-GGUF/blob/main/Phi-3-mini-4k-instruct-q4.gguf
+   
+   # Alternativa: baixe manualmente e coloque no diretório llm/models
+   ```
+
+2. **Atualize o docker-compose.yml**
+   ```yaml
+   services:
+     llm:
+       environment:
+         - LLM_MODEL_PATH=/app/models/Phi-3-mini-4k-instruct-q4.gguf
+   ```
+
+3. **Modifique o código do LLM para usar o modelo GGUF**
+   Certifique-se de que o arquivo `llm/app/llm_service.py` tenha:
+   ```python
+   import sys
+   sys.path.insert(0, '/tmp/llama_cpp_install')
+   
+   try:
+       import llama_cpp
+       has_llama_cpp = True
+   except ImportError:
+       has_llama_cpp = False
+   ```
+
+4. **Instale a biblioteca llama-cpp-python**
+   ```bash
+   docker exec -it unichat-llm bash -c "mkdir -p /tmp/llama_cpp_install && export CMAKE_ARGS='-DGGML_CUDA=OFF' && pip install llama-cpp-python==0.2.79 --no-cache-dir --force-reinstall --target=/tmp/llama_cpp_install"
+   ```
+
+5. **Reinicie o serviço LLM**
+   ```bash
+   docker compose restart llm
+   ```
+
+6. **Verifique nos logs se o modelo foi carregado corretamente**
+   ```bash
+   docker compose logs llm | grep "Modelo GGUF carregado com sucesso"
+   ``` 

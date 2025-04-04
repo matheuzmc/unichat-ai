@@ -1,41 +1,151 @@
+import sys
 import os
 from typing import Dict, List, Optional, Any
 import requests
-from langchain.llms import GPT4All
+import json
+import random
+import time
+import logging
+import urllib.request
+import shutil
+from dotenv import load_dotenv
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
-from dotenv import load_dotenv
+
+# Adicionar caminho da biblioteca llama-cpp-python instalada localmente
+sys.path.insert(0, '/tmp/llama_cpp_install')
+
+# Configurar logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# Importação para o modelo GPT4All
+try:
+    from langchain.llms import GPT4All
+    has_gpt4all = True
+except Exception as e:
+    logger.error(f"Erro ao importar GPT4All: {e}")
+    has_gpt4all = False
+
+# Importação para o modelo GGUF
+try:
+    import llama_cpp
+    has_llama_cpp = True
+    logger.info("llama-cpp-python importado com sucesso!")
+except ImportError:
+    logger.warning("llama-cpp-python não está disponível. O modelo GGUF não será utilizado.")
+    has_llama_cpp = False
 
 # Carrega variáveis de ambiente
 load_dotenv()
 
 # Variáveis globais
 llm = None
-backend_url = os.getenv("BACKEND_URL", "http://backend:8000/api")
-model_path = os.getenv("LLM_MODEL_PATH", "/app/models/model.bin")
+llm_gguf = None  # Modelo GGUF
+backend_url = os.getenv("BACKEND_URL", "http://backend/api")
+model_path = os.getenv("LLM_MODEL_PATH", "/app/models/Phi-3-mini-4k-instruct-q4.gguf")
+# URL atualizada para um modelo no Hugging Face
+model_url = os.getenv("LLM_MODEL_URL", "https://huggingface.co/mradermacher/ggml-gpt4all-j-v1.3-groovy/resolve/main/ggml-gpt4all-j-v1.3-groovy.bin")
+
+# Função de download comentada - o download será feito manualmente pelo usuário
+"""
+def download_model():
+    
+    # Baixa o modelo GPT4All da URL especificada.
+    
+    # Certifique-se de que o diretório existe
+    os.makedirs(os.path.dirname(model_path), exist_ok=True)
+    
+    # Baixa o modelo
+    logger.info(f"Baixando modelo de {model_url} para {model_path}...")
+    
+    try:
+        # Configurar cabeçalhos para evitar 403 Forbidden
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        
+        req = urllib.request.Request(model_url, headers=headers)
+        with urllib.request.urlopen(req) as response, open(model_path, 'wb') as out_file:
+            total_size = int(response.info().get('Content-Length', 0))
+            downloaded = 0
+            chunk_size = 1024 * 1024  # 1MB chunks
+            
+            logger.info(f"Tamanho total do modelo: {total_size / (1024 * 1024):.2f} MB")
+            
+            while True:
+                chunk = response.read(chunk_size)
+                if not chunk:
+                    break
+                
+                out_file.write(chunk)
+                downloaded += len(chunk)
+                
+                # Log do progresso a cada 10%
+                if total_size > 0:
+                    percent = downloaded * 100 / total_size
+                    if percent % 10 < 1:  # Log apenas a cada ~10%
+                        logger.info(f"Download progresso: {percent:.1f}% ({downloaded / (1024 * 1024):.1f} MB / {total_size / (1024 * 1024):.1f} MB)")
+            
+        logger.info("Download do modelo concluído com sucesso!")
+        return True
+    except Exception as e:
+        logger.error(f"Erro ao baixar modelo: {str(e)}")
+        return False
+"""
 
 def setup_llm():
     """
     Configura e inicializa o modelo LLM.
     
-    Esta função configura o modelo GPT4All usando o arquivo especificado
-    em LLM_MODEL_PATH ou usa um caminho padrão.
+    Esta função tenta carregar primeiramente o modelo GGUF. Se não for possível,
+    tenta carregar o modelo GPT4All. Se ambos falharem, usa simulação.
     """
-    global llm
+    global llm, llm_gguf
     
-    # Verifica se o modelo existe, se não, usa uma simulação
-    if os.path.exists(model_path):
-        # Em um ambiente real, carregar o modelo GPT4All
+    # Verifica se o modelo existe
+    if not os.path.exists(model_path):
+        logger.info(f"Modelo não encontrado em {model_path}.")
+        logger.warning("O modelo precisa ser baixado manualmente. Usando LLM simulado.")
+        logger.info(f"Para usar o LLM real, baixe o modelo de {model_url} e coloque-o em {model_path}")
+        llm = None
+        llm_gguf = None
+        return
+    
+    # Verifica a extensão do arquivo para determinar o tipo de modelo
+    is_gguf = model_path.endswith('.gguf')
+    logger.info(f"Verificando modelo: {model_path}, é GGUF: {is_gguf}, has_llama_cpp: {has_llama_cpp}")
+    
+    if is_gguf and has_llama_cpp:
         try:
-            llm = GPT4All(model=model_path, verbose=True)
-            print(f"Modelo GPT4All carregado do caminho: {model_path}")
+            # Tentar carregar o modelo GGUF com llama-cpp-python
+            logger.info(f"Tentando carregar modelo GGUF de {model_path}...")
+            logger.info(f"Módulo llama_cpp importado de: {llama_cpp.__file__}")
+            
+            # Parâmetros detalhados para debug
+            logger.info(f"Parâmetros de inicialização: n_ctx=4096, n_threads=4")
+            
+            llm_gguf = llama_cpp.Llama(
+                model_path=model_path,
+                n_ctx=4096,       # Tamanho do contexto
+                n_threads=4       # Número de threads
+            )
+            logger.info(f"Modelo GGUF carregado com sucesso de {model_path}")
+            return
         except Exception as e:
-            print(f"Erro ao carregar modelo GPT4All: {str(e)}")
-            # Fallback: usar um LLM simulado
-            llm = None
-    else:
-        print(f"Arquivo de modelo não encontrado em {model_path}. Usando LLM simulado.")
+            logger.error(f"Erro ao carregar modelo GGUF: {str(e)}")
+            import traceback
+            logger.error(f"Traceback detalhado: {traceback.format_exc()}")
+            llm_gguf = None
+    
+    # Se não for GGUF ou se falhar, tenta carregar como GPT4All
+    try:
+        llm = GPT4All(model=model_path, verbose=True)
+        logger.info(f"Modelo GPT4All carregado do caminho: {model_path}")
+    except Exception as e:
+        logger.error(f"Erro ao carregar modelo GPT4All: {str(e)}")
+        # Fallback: usar um LLM simulado
         llm = None
 
 async def fetch_student_data(student_id: int) -> Dict[str, Any]:
@@ -48,16 +158,42 @@ async def fetch_student_data(student_id: int) -> Dict[str, Any]:
     Returns:
         Um dicionário com os dados do aluno.
     """
+    endpoint = f"{backend_url}/alunos/{student_id}/detalhes/"
+    logger.info(f"Buscando dados do aluno no endpoint: {endpoint}")
+    
     try:
+        # Adiciona cabeçalhos para depuração
+        headers = {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'User-Agent': 'UniChat-LLM-Service'
+        }
+        
         # Busca detalhes do aluno
-        response = requests.get(f"{backend_url}/alunos/{student_id}/detalhes/")
+        response = requests.get(endpoint, headers=headers, timeout=10)
+        
+        logger.info(f"Resposta do backend: Status {response.status_code}")
+        
         if response.status_code == 200:
-            return response.json()
+            data = response.json()
+            logger.info(f"Dados recebidos do aluno {student_id}: {len(str(data))} bytes")
+            return data
         else:
-            print(f"Erro ao buscar dados do aluno: {response.status_code}")
-            return {}
+            logger.error(f"Erro ao buscar dados do aluno: Status {response.status_code}, Resposta: {response.text}")
+            # Tente uma URL alternativa como fallback (acesso direto via backend)
+            alt_url = f"http://backend/api/alunos/{student_id}/detalhes/"
+            logger.info(f"Tentando URL alternativa: {alt_url}")
+            alt_response = requests.get(alt_url, headers=headers, timeout=10)
+            
+            if alt_response.status_code == 200:
+                data = alt_response.json()
+                logger.info(f"Dados recebidos do aluno {student_id} (via URL alternativa): {len(str(data))} bytes")
+                return data
+            else:
+                logger.error(f"Erro ao buscar dados do aluno (via URL alternativa): Status {alt_response.status_code}")
+                return {}
     except Exception as e:
-        print(f"Exceção ao buscar dados do aluno: {str(e)}")
+        logger.error(f"Exceção ao buscar dados do aluno: {str(e)}")
         return {}
 
 def create_system_prompt(student_data: Dict[str, Any]) -> str:
@@ -72,6 +208,7 @@ def create_system_prompt(student_data: Dict[str, Any]) -> str:
     """
     # Extrai informações relevantes dos dados do aluno
     if not student_data:
+        logger.warning("Nenhum dado de aluno fornecido para criar o prompt.")
         return """
         Você é um assistente acadêmico chamado UniChat. Você ajuda alunos com informações
         sobre suas notas, horários, finanças e outros aspectos acadêmicos. 
@@ -83,6 +220,8 @@ def create_system_prompt(student_data: Dict[str, Any]) -> str:
     nome = student_data.get("nome", "Aluno")
     curso = student_data.get("curso", "")
     semestre = student_data.get("semestre", "")
+    
+    logger.info(f"Criando prompt para aluno: {nome}, curso: {curso}, semestre: {semestre}")
     
     # Formata notas (se disponíveis)
     notas_info = ""
@@ -129,28 +268,65 @@ async def generate_response(question: str, student_id: int, context_data: Option
     Returns:
         A resposta gerada pelo LLM.
     """
+    logger.info(f"Gerando resposta para pergunta: '{question}' do aluno ID: {student_id}")
+    
     # Busca dados do aluno (se não fornecidos no context_data)
     student_data = context_data or await fetch_student_data(student_id)
+    
+    # Verifica se há dados do aluno
+    if not student_data:
+        logger.warning(f"Nenhum dado encontrado para o aluno ID: {student_id}, usando simulação")
+    else:
+        logger.info(f"Dados do aluno recuperados: {list(student_data.keys())}")
     
     # Cria um prompt de sistema
     system_prompt = create_system_prompt(student_data)
     
-    # Prepara o prompt completo
-    prompt_template = f"{system_prompt}\n\nPergunta: {question}\n\nResposta:"
+    # Se o modelo GGUF estiver disponível, use-o
+    if llm_gguf is not None:
+        try:
+            # Formato do prompt para o modelo Phi-3
+            prompt = f"<|user|>\n{system_prompt}\n\nPergunta: {question}<|end|>\n<|assistant|>"
+            logger.info("Gerando resposta com modelo GGUF (Phi-3)")
+            
+            # Gera a resposta
+            output = llm_gguf(
+                prompt,
+                max_tokens=500,
+                stop=["<|end|>"],
+                temperature=0.7,
+                echo=False
+            )
+            
+            # Extrai a resposta
+            response = output["choices"][0]["text"].strip()
+            
+            logger.info(f"Resposta gerada pelo modelo GGUF: {len(response)} caracteres")
+            return response
+        except Exception as e:
+            logger.error(f"Erro ao gerar resposta com modelo GGUF: {str(e)}")
+            # Fallback para o próximo método
     
-    # Verifica se o LLM está disponível
+    # Se o modelo GPT4All estiver disponível, use-o
     if llm:
         try:
+            # Prepara o prompt completo para GPT4All
+            prompt_template = f"{system_prompt}\n\nPergunta: {question}\n\nResposta:"
+            
             # Gera a resposta usando o LLM real
+            logger.info("Gerando resposta com GPT4All")
             response = llm(prompt_template)
+            logger.info(f"Resposta gerada pelo GPT4All: {len(response)} caracteres")
             return response.strip()
         except Exception as e:
-            print(f"Erro ao gerar resposta com LLM: {str(e)}")
+            logger.error(f"Erro ao gerar resposta com GPT4All: {str(e)}")
             # Fallback para resposta simulada
+            logger.info("Usando simulação como fallback")
             return simulate_response(question, student_data)
-    else:
-        # Usa uma resposta simulada se o LLM não estiver disponível
-        return simulate_response(question, student_data)
+    
+    # Usa uma resposta simulada se o LLM não estiver disponível
+    logger.info("LLM não disponível, usando simulação")
+    return simulate_response(question, student_data)
 
 def simulate_response(question: str, student_data: Dict[str, Any]) -> str:
     """
@@ -166,6 +342,11 @@ def simulate_response(question: str, student_data: Dict[str, Any]) -> str:
     question_lower = question.lower()
     nome = student_data.get("nome", "Aluno") if student_data else "Aluno"
     
+    logger.info(f"Gerando resposta simulada para '{question_lower}' para o aluno {nome}")
+    
+    # Prefixo para respostas simuladas
+    prefixo = "[SIMULAÇÃO] "
+    
     # Responde com base em palavras-chave na pergunta
     if "nota" in question_lower or "avaliação" in question_lower or "prova" in question_lower:
         # Resposta sobre notas
@@ -174,10 +355,10 @@ def simulate_response(question: str, student_data: Dict[str, Any]) -> str:
             if disciplina:
                 nota = next((nota for nota in student_data["notas"] if nota["disciplina"] == disciplina), None)
                 if nota:
-                    return f"Olá {nome}! Sua nota em {disciplina} é {nota['nota_final']}."
+                    return f"{prefixo}Olá {nome}! Sua nota em {disciplina} é {nota['nota_final']}."
             
-            return f"Olá {nome}! Você tem as seguintes notas registradas: " + ", ".join([f"{nota['disciplina']}: {nota['nota_final']}" for nota in student_data["notas"][:3]])
-        return f"Olá {nome}! Não encontrei informações sobre suas notas no sistema. Entre em contato com a secretaria para mais detalhes."
+            return f"{prefixo}Olá {nome}! Você tem as seguintes notas registradas: " + ", ".join([f"{nota['disciplina']}: {nota['nota_final']}" for nota in student_data["notas"][:3]])
+        return f"{prefixo}Olá {nome}! Não encontrei informações sobre suas notas no sistema. Entre em contato com a secretaria para mais detalhes."
     
     elif "horário" in question_lower or "aula" in question_lower or "disciplina" in question_lower:
         # Resposta sobre horários
@@ -186,17 +367,17 @@ def simulate_response(question: str, student_data: Dict[str, Any]) -> str:
             if disciplina:
                 horario = next((horario for horario in student_data["horarios"] if horario["disciplina"] == disciplina), None)
                 if horario:
-                    return f"Olá {nome}! Sua aula de {disciplina} é {horario['dia_semana_display']} das {horario['horario_inicio']} às {horario['horario_fim']} na sala {horario['sala']}."
+                    return f"{prefixo}Olá {nome}! Sua aula de {disciplina} é {horario['dia_semana_display']} das {horario['horario_inicio']} às {horario['horario_fim']} na sala {horario['sala']}."
             
-            return f"Olá {nome}! Seus horários de aula são: " + "; ".join([f"{horario['disciplina']}: {horario['dia_semana_display']} {horario['horario_inicio']}-{horario['horario_fim']}" for horario in student_data["horarios"][:3]])
-        return f"Olá {nome}! Não encontrei informações sobre seus horários no sistema. Verifique com a coordenação."
+            return f"{prefixo}Olá {nome}! Seus horários de aula são: " + "; ".join([f"{horario['disciplina']}: {horario['dia_semana_display']} {horario['horario_inicio']}-{horario['horario_fim']}" for horario in student_data["horarios"][:3]])
+        return f"{prefixo}Olá {nome}! Não encontrei informações sobre seus horários no sistema. Verifique com a coordenação."
     
     elif "mensalidade" in question_lower or "financeiro" in question_lower or "pagamento" in question_lower:
         # Resposta sobre dados financeiros
         if student_data and "dados_financeiros" in student_data and student_data["dados_financeiros"]:
             dados = student_data["dados_financeiros"][0]  # Pega o primeiro registro
-            return f"Olá {nome}! Sua próxima mensalidade no valor de R${dados['mensalidade']} vence em {dados['data_vencimento']} e está com status {dados['status_pagamento_display']}."
-        return f"Olá {nome}! Não encontrei informações financeiras no sistema. Entre em contato com o setor financeiro."
+            return f"{prefixo}Olá {nome}! Sua próxima mensalidade no valor de R${dados['mensalidade']} vence em {dados['data_vencimento']} e está com status {dados['status_pagamento_display']}."
+        return f"{prefixo}Olá {nome}! Não encontrei informações financeiras no sistema. Entre em contato com o setor financeiro."
     
     # Resposta genérica
-    return f"Olá {nome}! Entendi sua pergunta sobre '{question}'. Como posso ajudar com mais detalhes? Você pode perguntar sobre notas, horários, mensalidades ou outros assuntos acadêmicos." 
+    return f"{prefixo}Olá {nome}! Entendi sua pergunta sobre '{question}'. Como posso ajudar com mais detalhes? Você pode perguntar sobre notas, horários, mensalidades ou outros assuntos acadêmicos." 

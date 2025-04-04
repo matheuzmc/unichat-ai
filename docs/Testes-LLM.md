@@ -123,3 +123,90 @@ O sistema foi projetado para ser facilmente extensível:
 2. Adicionar testes de robustez para consultas ambíguas ou mal-formadas
 3. Implementar métricas de tempo de resposta e performance
 4. Criar um dashboard de monitoramento para acompanhar a evolução da qualidade das respostas ao longo do tempo 
+
+## Integrando e Testando Modelos GGUF
+
+### Sobre Modelos GGUF
+
+O formato GGUF (GPT-Generated Unified Format) é um formato de modelo otimizado para inferência eficiente em dispositivos com recursos limitados. Os modelos GGUF permitem executar LLMs localmente com melhor desempenho e menor consumo de memória comparado a outros formatos.
+
+No UniChat, integramos suporte para o modelo Phi-3-mini-4k-instruct-q4 em formato GGUF através da biblioteca llama-cpp-python.
+
+### Passos para Testes Manuais
+
+1. **Verificar se o modelo foi carregado corretamente**
+   ```bash
+   docker compose logs llm | grep "Modelo GGUF carregado com sucesso"
+   ```
+
+2. **Testar diretamente via API**
+   ```bash
+   curl -X POST "http://localhost:8080/api/query" \
+     -H "Content-Type: application/json" \
+     -d '{"question": "Qual é a minha nota em Física?", "student_id": 1}'
+   ```
+
+3. **Testar via interface web**
+   Acesse http://localhost:3000 e faça perguntas ao chatbot para verificar se as respostas estão sendo geradas pelo modelo GGUF.
+
+### Comparação entre Modo Simulado e Modelo GGUF
+
+Para fins de desenvolvimento, o UniChat pode operar em dois modos:
+
+1. **Modo Simulado**
+   - Resposta prefixada com "[SIMULAÇÃO]"
+   - Baseado em regras predefinidas
+   - Rápido, sem necessidade de carregar modelo
+   - Útil para testes de interface e fluxos
+
+2. **Modo GGUF**
+   - Utiliza o modelo GGUF para gerar respostas
+   - Qualidade superior e contextualização mais precisa
+   - Requer mais recursos de hardware
+   - Dependências adicionais (llama-cpp-python)
+
+O sistema usa automaticamente o modo GGUF se o modelo e a biblioteca estiverem disponíveis, caso contrário, faz fallback para o modo simulado.
+
+### Métricas para Avaliar Qualidade do Modelo GGUF
+
+Para avaliar objetivamente o desempenho do modelo GGUF comparado à simulação, recomendamos focar nas seguintes métricas:
+
+1. **Relevância do Contexto**: Como o modelo incorpora os dados do aluno na resposta
+2. **Precisão Factual**: Correção das informações apresentadas
+3. **Riqueza de Resposta**: Nível de detalhe e completude
+4. **Tempo de Resposta**: Latência de processamento
+5. **Consistência**: Variação na qualidade entre diferentes tipos de consultas
+
+### Parâmetros de Configuração do Modelo
+
+O modelo GGUF pode ser ajustado através dos seguintes parâmetros na função `Llama()`:
+
+```python
+llm_gguf = llama_cpp.Llama(
+    model_path=model_path,
+    n_ctx=4096,        # Tamanho do contexto (ajustável entre 2048 - 8192)
+    n_threads=4,       # Número de threads (ajuste conforme CPU disponível)
+    n_batch=512,       # Tamanho do lote para processamento
+    verbose=False      # Modo verboso para debugging
+)
+```
+
+Para gerar respostas, você pode ajustar:
+
+```python
+output = llm_gguf(
+    prompt,
+    max_tokens=500,     # Número máximo de tokens na resposta
+    stop=["<|end|>"],   # Sequências para interromper a geração
+    temperature=0.7,    # Maior valor = mais criativo, menor = mais determinístico
+    echo=False          # Se deve incluir o prompt na saída
+)
+```
+
+### Próximos Passos para Melhorias
+
+1. **Otimização de Prompts**: Refinar o sistema de prompts para melhor aproveitar as capacidades do modelo
+2. **Quantização Otimizada**: Experimentar diferentes níveis de quantização (q8_0, q4_0, q4_K_M)
+3. **Suporte a GPU**: Habilitar aceleração via CUDA para melhor desempenho
+4. **Cache de KV**: Implementar cache de key-value para acelerar respostas em conversas longas
+5. **Testes Comparativos**: Desenvolver testes automatizados para comparar desempenho com outros modelos 
