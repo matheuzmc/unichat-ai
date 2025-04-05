@@ -1,2 +1,4 @@
 # Dependências específicas da aplicação
 # As dependências principais já estão na imagem base 
+-r requirements.txt
+psutil==5.9.5 

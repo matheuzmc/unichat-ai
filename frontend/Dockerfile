@@ -2,10 +2,9 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-COPY package.json .
+COPY package.json package-lock.json* ./
 
 RUN npm install
-RUN npm install uuid axios react-markdown react-icons clsx @types/uuid
 
 COPY . .
 

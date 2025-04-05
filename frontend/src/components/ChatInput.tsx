@@ -1,5 +1,7 @@
 import React, { useState, FormEvent } from 'react';
 import { FaPaperPlane } from 'react-icons/fa';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -20,23 +22,25 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled = false }
   return (
     <form 
       onSubmit={handleSubmit} 
-      className="flex items-center gap-2 p-3 border-t border-gray-200 bg-white"
+      className="flex items-center gap-2 p-4 border-t border-border bg-card/80"
     >
-      <input
+      <Input
         type="text"
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         placeholder="Digite sua pergunta..."
-        className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
         disabled={disabled}
+        className="bg-background/60 focus-visible:ring-primary"
       />
-      <button
+      <Button
         type="submit"
         disabled={!message.trim() || disabled}
-        className="p-3 bg-blue-600 text-white rounded-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 transition"
+        size="icon"
+        variant="default"
+        className="rounded-full"
       >
-        <FaPaperPlane />
-      </button>
+        <FaPaperPlane className="h-4 w-4" />
+      </Button>
     </form>
   );
 };

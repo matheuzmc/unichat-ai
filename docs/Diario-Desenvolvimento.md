@@ -269,6 +269,41 @@ Embora tenhamos alcançado bons resultados com otimizações de CPU, uma próxim
 
 A implementação do sistema de cache se mostrou a otimização com melhor custo-benefício, reduzindo o tempo de resposta em 99.99% para consultas repetidas, um cenário comum em ambientes educacionais onde vários alunos podem fazer perguntas semelhantes.
 
+## [Data: 2024-04-07]
+
+### Atividades Realizadas
+- Implementação de um indicador de digitação (Typing Indicator) no chat para melhorar o feedback visual
+- Adição do componente Skeleton do shadcn/ui para interfaces de carregamento
+- Otimização adicional do gerenciamento de memória do LLM para Mac com chips Apple Silicon
+- Implementação de thread dedicado para limpeza de memória em intervalos regulares via psutil
+- Integração de configurações específicas por plataforma para o LLM
+- Criação de animação de bolhas digitando para feedback visual durante o processamento do LLM
+- Configurações otimizadas para Mac com Apple Silicon (M1/M2/M3)
+
+### Decisões Tomadas
+- Utilização de um componente de indicador de digitação: melhora a experiência do usuário fornecendo feedback visual
+- Adoção do Skeleton para feedback de carregamento: padrão moderno de UX para indicar que conteúdo está sendo carregado
+- Implementação de gerenciador de memória periódico: evita vazamentos e mantém performance estável no Mac
+- Detecção automática de plataforma: aplica configurações otimizadas com base no hardware
+- Escolha de animação personalizada para as bolhas de digitação: melhor performance visual que a animação padrão do Tailwind
+
+### Problemas Encontrados
+- Componente de loader não disponível no shadcn/ui: resolvido criando um componente customizado
+- Animação bounce padrão do Tailwind não oferecia a aparência desejada: implementada animação personalizada via CSS
+- Problemas de liberação de memória após o garbage collection no Python: implementado monitoramento via psutil e thread de limpeza dedicado
+- Consumo crescente de memória durante operações prolongadas: resolvido com limpeza de memória periódica
+
+### Próximos Passos
+- Refinar o sistema de otimização de memória para trabalhar com outros modelos LLM
+- Implementar indicadores visuais adicionais para outros estados da aplicação
+- Adicionar opções de temas para os componentes visuais
+- Testes adicionais do sistema de gerenciamento de memória em operações de longa duração
+
+### Observações
+A implementação do indicador de digitação representa uma melhoria significativa na experiência do usuário, fornecendo feedback visual claro durante o processamento das consultas. A ausência desse tipo de feedback era uma falha na experiência do usuário, agora corrigida.
+
+As otimizações de memória para Mac com chip M1/M2/M3 são cruciais para manter o sistema estável durante uso prolongado, prevenindo degradação de performance ao longo do tempo. O sistema agora monitora ativamente o uso de memória e realiza liberações periódicas para manter o consumo sob controle.
+
 ---
 
 <!-- Novas entradas serão adicionadas acima desta linha --> 

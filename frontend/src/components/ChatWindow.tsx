@@ -4,6 +4,7 @@ import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import { ChatMessage as ChatMessageType } from '../types';
 import { chatService } from '../services/api';
+import TypingIndicator, { SkeletonMessage } from './TypingIndicator';
 
 // Usuário fictício para o MVP
 const MOCK_USER = {
@@ -23,10 +24,10 @@ const ChatWindow: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Efeito para rolar para o final quando novas mensagens são adicionadas
+  // Efeito para rolar para o final quando novas mensagens são adicionadas ou quando o estado de carregamento muda
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, loading]);
 
   const handleSendMessage = async (content: string) => {
     // Adiciona a mensagem do usuário
@@ -76,16 +77,17 @@ const ChatWindow: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 rounded-lg shadow-md overflow-hidden">
-      <div className="bg-blue-600 text-white p-4">
+    <div className="flex flex-col h-full rounded-xl shadow-lg overflow-hidden border border-border bg-card/50 backdrop-blur-sm">
+      <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground py-4 px-6">
         <h1 className="text-xl font-bold">UniChat</h1>
-        <p className="text-sm opacity-80">Seu assistente acadêmico inteligente</p>
+        <p className="text-sm opacity-90">Seu assistente acadêmico inteligente</p>
       </div>
       
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-background/40">
         {messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
         ))}
+        {loading && <TypingIndicator />}
         <div ref={messagesEndRef} />
       </div>
       

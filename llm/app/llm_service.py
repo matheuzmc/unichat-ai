@@ -12,9 +12,26 @@ from dotenv import load_dotenv
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
+import gc
+import time
+from threading import Thread
 
-# Configurar logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# Import da configuração da plataforma
+from .platform_config import get_model_config, should_run_gc, is_mac_m1
+
+# Configurar logging com rotação de arquivos
+try:
+    from logging.handlers import RotatingFileHandler
+    log_handler = RotatingFileHandler("llm_service.log", maxBytes=1024*1024*5, backupCount=3)
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[log_handler, logging.StreamHandler()]
+    )
+except:
+    # Fallback para configuração padrão
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
 logger = logging.getLogger(__name__)
 
 # Importação para o modelo GPT4All
@@ -31,16 +48,9 @@ try:
     has_llama_cpp = True
     logger.info("llama-cpp-python importado com sucesso!")
     logger.info(f"Caminho do módulo llama_cpp: {llama_cpp.__file__}")
-    # Verificar se estamos em um Mac M1
-    import platform
-    is_macos = platform.system() == "Darwin"
-    is_arm = platform.machine() == "arm64"
-    is_mac_m1 = is_macos and is_arm
-    logger.info(f"Sistema: {platform.system()}, Arquitetura: {platform.machine()}, É Mac M1: {is_mac_m1}")
 except ImportError as e:
     logger.warning(f"llama-cpp-python não está disponível. O modelo GGUF não será utilizado. Erro: {e}")
     has_llama_cpp = False
-    is_mac_m1 = False
 
 # Carrega variáveis de ambiente
 load_dotenv()
@@ -48,10 +58,40 @@ load_dotenv()
 # Variáveis globais
 llm = None
 llm_gguf = None  # Modelo GGUF
+cleanup_thread = None
 backend_url = os.getenv("BACKEND_URL", "http://backend/api")
 model_path = os.getenv("LLM_MODEL_PATH", "/app/models/Phi-3-mini-4k-instruct-q4.gguf")
 # URL atualizada para um modelo no Hugging Face
 model_url = os.getenv("LLM_MODEL_URL", "https://huggingface.co/mradermacher/ggml-gpt4all-j-v1.3-groovy/resolve/main/ggml-gpt4all-j-v1.3-groovy.bin")
+
+def memory_cleanup():
+    """Executa limpeza de memória periódica."""
+    interval = get_model_config().get("gc_interval", 60)
+    logger.info(f"Iniciando thread de limpeza de memória a cada {interval} segundos")
+    
+    while True:
+        time.sleep(interval)
+        before = get_memory_usage()
+        gc.collect()
+        after = get_memory_usage()
+        logger.info(f"Limpeza de memória executada. Antes: {before}MB, Depois: {after}MB, Liberado: {max(0, before - after):.2f}MB")
+
+def get_memory_usage():
+    """Retorna o uso de memória atual em MB."""
+    try:
+        import psutil
+        process = psutil.Process(os.getpid())
+        return process.memory_info().rss / 1024 / 1024
+    except ImportError:
+        return 0
+
+def start_gc_thread():
+    """Inicia o thread de limpeza de memória."""
+    global cleanup_thread
+    if cleanup_thread is None:
+        cleanup_thread = Thread(target=memory_cleanup, daemon=True)
+        cleanup_thread.start()
+        logger.info("Thread de limpeza de memória iniciado")
 
 def setup_llm():
     """
@@ -77,34 +117,33 @@ def setup_llm():
     
     if is_gguf and has_llama_cpp:
         try:
+            # Obter configurações para a plataforma atual
+            config = get_model_config("gguf")
+            logger.info(f"Usando configuração para a plataforma: {config}")
+            
             # Tentar carregar o modelo GGUF com llama-cpp-python
             logger.info(f"Tentando carregar modelo GGUF de {model_path}...")
             
-            # Configurações específicas para Mac M1 com Metal
-            if is_mac_m1:
-                logger.info("Configurando parâmetros otimizados para Mac M1 com Metal")
-                llm_gguf = llama_cpp.Llama(
-                    model_path=model_path,
-                    n_ctx=4096,            # Tamanho do contexto
-                    n_batch=512,           # Tamanho do lote para processamento
-                    n_threads=6,           # Número de threads para CPU cores auxiliares
-                    n_gpu_layers=40,       # Número de camadas para processar na GPU
-                    use_mlock=True,        # Manter o modelo na RAM
-                    verbose=True,          # Saída verbosa para debug
-                    seed=-1,               # Semente aleatória para reprodutibilidade
-                    offload_kqv=True       # Offload key/query/value para a GPU
-                )
-                logger.info("Modelo GGUF carregado com suporte a Metal no Mac M1")
-            else:
-                # Configuração padrão para outros sistemas
-                logger.info("Usando configuração padrão para sistemas não-M1")
-                llm_gguf = llama_cpp.Llama(
-                    model_path=model_path,
-                    n_ctx=4096,       # Tamanho do contexto
-                    n_threads=4       # Número de threads
-                )
-                
+            # Usar a configuração da plataforma
+            llm_gguf = llama_cpp.Llama(
+                model_path=model_path,
+                n_ctx=config.get("n_ctx", 4096),
+                n_batch=config.get("n_batch", 512),
+                n_threads=config.get("n_threads", 4),
+                n_gpu_layers=config.get("n_gpu_layers", 40),
+                use_mlock=config.get("use_mlock", True),
+                verbose=config.get("verbose", True),
+                seed=config.get("seed", -1),
+                offload_kqv=config.get("offload_kqv", True),
+                embedding=config.get("embedding", False)
+            )
+            
             logger.info(f"Modelo GGUF carregado com sucesso de {model_path}")
+            
+            # Iniciar thread de limpeza de memória se necessário
+            if should_run_gc():
+                start_gc_thread()
+                
             return
         except Exception as e:
             logger.error(f"Erro ao carregar modelo GGUF: {str(e)}")
@@ -114,8 +153,14 @@ def setup_llm():
     
     # Se não for GGUF ou se falhar, tenta carregar como GPT4All
     try:
-        llm = GPT4All(model=model_path, verbose=True)
+        # Obter configurações para GPT4All
+        config = get_model_config("gpt4all")
+        llm = GPT4All(model=model_path, verbose=config.get("verbose", True))
         logger.info(f"Modelo GPT4All carregado do caminho: {model_path}")
+        
+        # Iniciar thread de limpeza de memória se necessário
+        if should_run_gc():
+            start_gc_thread()
     except Exception as e:
         logger.error(f"Erro ao carregar modelo GPT4All: {str(e)}")
         # Fallback: usar um LLM simulado
@@ -258,14 +303,17 @@ async def generate_response(question: str, student_id: int, context_data: Option
     # Se o modelo GGUF estiver disponível, use-o
     if llm_gguf is not None:
         try:
-            # Formato do prompt para o modelo Phi-3
-            prompt = f"<|user|>\n{system_prompt}\n\nPergunta: {question}<|end|>\n<|assistant|>"
-            logger.info("Gerando resposta com modelo GGUF (Phi-3)")
+            # Obter configurações para a plataforma atual
+            config = get_model_config("gguf")
             
-            # Gera a resposta
+            # Formato do prompt para o modelo Phi-3
+            prompt = f"<|user|>\n{system_prompt.strip()}\n\nPergunta: {question}<|end|>\n<|assistant|>"
+            logger.info("Gerando resposta com modelo GGUF")
+            
+            # Gera a resposta usando as configurações da plataforma
             output = llm_gguf(
                 prompt,
-                max_tokens=500,
+                max_tokens=config.get("max_tokens", 500),
                 stop=["<|end|>"],
                 temperature=0.7,
                 echo=False
@@ -275,6 +323,11 @@ async def generate_response(question: str, student_id: int, context_data: Option
             response = output["choices"][0]["text"].strip()
             
             logger.info(f"Resposta gerada pelo modelo GGUF: {len(response)} caracteres")
+            
+            # Forçar limpeza de memória em plataformas sensíveis (Mac)
+            if is_mac_m1:
+                gc.collect()
+                
             return response
         except Exception as e:
             logger.error(f"Erro ao gerar resposta com modelo GGUF: {str(e)}")
@@ -290,6 +343,11 @@ async def generate_response(question: str, student_id: int, context_data: Option
             logger.info("Gerando resposta com GPT4All")
             response = llm(prompt_template)
             logger.info(f"Resposta gerada pelo GPT4All: {len(response)} caracteres")
+            
+            # Forçar limpeza de memória em plataformas sensíveis (Mac)
+            if is_mac_m1:
+                gc.collect()
+                
             return response.strip()
         except Exception as e:
             logger.error(f"Erro ao gerar resposta com GPT4All: {str(e)}")

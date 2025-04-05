@@ -300,4 +300,73 @@ Este documento será atualizado à medida que novas decisões técnicas forem to
 - Descrição clara da decisão
 - Justificativa detalhada
 - Alternativas consideradas
-- Trade-offs aceitos 
+- Trade-offs aceitos
+
+## Decisões de Otimização para Mac [Atualização: 2024-04-07]
+
+### Otimização do LLM para Mac com Apple Silicon
+
+**Decisão:** Implementar configurações e otimizações específicas para Macs com chips M1/M2/M3.
+
+**Justificativa:**
+- Aproveitar o hardware específico do Mac com Apple Silicon (API Metal)
+- Melhora significativa de performance para usuários de MacBooks
+- Redução do consumo de memória e prevenção de vazamentos
+- Experiência de usuário mais fluida em hardware Apple
+
+**Implementações específicas:**
+- Criação de arquivo `platform_config.py` para gerenciar configurações por plataforma
+- Detecção automática de sistema operacional e arquitetura
+- Thread dedicado de limpeza de memória para Macs
+- Monitoramento periódico do uso de memória via psutil
+- Ajuste de parâmetros do modelo (n_ctx, n_batch, n_threads) para otimização em Apple Silicon
+- Configuração de n_gpu_layers para aproveitar a GPU integrada via Metal
+
+**Alternativas consideradas:**
+- Emulação x86 via Rosetta 2: descartada por performance inferior
+- Configuração única para todas as plataformas: descartada por subutilizar o hardware Apple
+- Bibliotecas de otimização de terceiros: descartadas por questões de manutenibilidade
+
+## Decisões de Interface do Usuário [Atualização: 2024-04-07]
+
+### Indicador de Digitação (Typing Indicator)
+
+**Decisão:** Implementar um indicador visual de "digitação" durante o processamento das consultas pelo LLM.
+
+**Justificativa:**
+- Feedback visual ao usuário durante o processamento das consultas
+- Redução da percepção de tempo de espera
+- Padrão de UX comum em interfaces de chat modernas
+- Melhor experiência de usuário sem alterações de backend
+
+**Implementação:**
+- Criação de componente React dedicado (`TypingIndicator.tsx`)
+- Integração com o componente ChatWindow para exibição durante estados de loading
+- Animação customizada de "bolhas digitando" para feedback visual
+- Utilização do componente Skeleton do shadcn/ui para versão alternativa
+
+**Alternativas consideradas:**
+- Spinner de carregamento genérico: muito impessoal para interface de chat
+- Barra de progresso: inadequada para processamento de linguagem natural
+- Mensagem estática de "processando": menos engajadora que a animação
+
+### Componentes de UI Reutilizáveis
+
+**Decisão:** Adotar e integrar a biblioteca shadcn/ui para componentes React reutilizáveis.
+
+**Justificativa:**
+- Componentes React reutilizáveis e estilizáveis
+- Integração perfeita com Tailwind CSS
+- Código-fonte aberto e customizável
+- Base de design consistente para a aplicação
+- Não é uma dependência tradicional, mas uma coleção de componentes
+
+**Implementações específicas:**
+- Integração do componente Skeleton para indicadores de carregamento
+- Estilização consistente com o tema da aplicação
+- Reutilização de componentes para reduzir duplicação de código
+
+**Alternativas consideradas:**
+- Uso de componentes personalizados: mais trabalho de manutenção
+- Material UI: estética não alinhada com a visão do projeto
+- Chakra UI: menos integrado com Tailwind CSS 
