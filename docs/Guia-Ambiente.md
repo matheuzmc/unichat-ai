@@ -207,6 +207,59 @@ docker-compose exec backend python manage.py createsuperuser
 docker-compose exec backend python manage.py loaddata initial_data
 ```
 
+## Configuração Especial para MacBooks M1/M2/M3
+
+Os MacBooks com chips Apple Silicon (M1/M2/M3) possuem uma configuração especial para maximizar o desempenho do LLM através da API Metal.
+
+### Inicialização com LLM Local
+
+Para MacBooks com chips M1/M2/M3, é recomendado executar o serviço LLM localmente (fora do Docker) para aproveitar a aceleração de hardware, enquanto os demais serviços continuam em containers Docker.
+
+1. **Usar o script de inicialização automática:**
+
+```bash
+./start_unichat.sh
+```
+
+Este script:
+- Inicia os serviços Docker (backend, frontend, db)
+- Configura e inicia o LLM localmente com suporte a Metal
+- Detecta automaticamente o chip M1/M2/M3 e otimiza as configurações
+
+2. **Configuração manual (se necessário):**
+
+```bash
+# Iniciar serviços Docker (exceto LLM)
+docker-compose up -d db backend frontend
+
+# Configurar e iniciar o LLM local
+cd llm
+./local_setup.sh
+```
+
+### Requisitos para LLM Local no M1/M2/M3
+
+- O modelo `Phi-3-mini-4k-instruct-q4.gguf` deve estar no diretório `llm/models/`
+- Python 3.10+ deve estar instalado no MacOS
+- O Mac deve ter pelo menos 8GB de RAM (16GB recomendado)
+
+### Verificação do Funcionamento
+
+Para verificar se o LLM local está funcionando corretamente:
+
+```bash
+# Verificar se o processo está rodando
+ps aux | grep uvicorn
+
+# Testar o endpoint de saúde
+curl http://localhost:8080/health
+```
+
+Resposta esperada:
+```json
+{"status":"ok","message":"UniChat LLM Service is running"}
+```
+
 ## Solução de Problemas
 
 ### Problemas Comuns

@@ -1,0 +1,21 @@
+services:
+  # Remover o serviço LLM do Docker
+  llm:
+    profiles: ["disabled"]  # Isso fará com que o serviço não seja iniciado por padrão
+    
+  # Ajustar outros serviços para se conectarem ao LLM local
+  backend:
+    environment:
+      - LLM_SERVICE_URL=http://host.docker.internal:8080
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py populate_db &&
+             python manage.py runserver 0.0.0.0:8000"
+      
+  frontend:
+    environment:
+      - REACT_APP_LLM_SERVICE_URL=http://localhost:8080
+    extra_hosts:
+      - "host.docker.internal:host-gateway" 

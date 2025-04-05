@@ -59,3 +59,6 @@ Thumbs.db
 # Relatórios de testes LLM
 backend/relatorios_llm/
 relatorios_llm/
+
+# Modelos LLM
+llm/models/

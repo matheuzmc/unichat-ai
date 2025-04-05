@@ -178,13 +178,50 @@ A interface de chat, embora simples, demonstra efetivamente o conceito e permiti
 ## [Data: 2024-04-05]
 
 ### Atividades Realizadas
-- Integração do modelo GGUF Phi-3-mini-4k-instruct-q4 ao serviço LLM
-- Instalação e configuração da biblioteca llama-cpp-python no contêiner LLM
-- Resolução de problemas de permissão e dependências no contêiner Docker
-- Modificação do código do serviço LLM para suportar modelos GGUF
-- Atualização do docker-compose.yml para configurar o caminho correto do modelo
-- Testes de integração do modelo GGUF com o sistema UniChat
-- Documentação do processo de instalação e configuração
+- Otimização significativa do serviço LLM para melhorar tempo de resposta
+- Implementação de sistema de cache em dois níveis (dados do aluno e respostas)
+- Redução do tamanho do contexto de 4096 para 1024 tokens para melhor performance
+- Otimização de parâmetros do modelo (threads, batch size, temperatura)
+- Implementação de sistema de timeout para respostas
+- Redução e otimização dos prompts do sistema
+- Criação de estratégia de build em duas camadas para reduzir tempo de build
+- Análise de desempenho comparativa entre diferentes configurações
+- Atualização da documentação de testes e instalação
+
+## [Data: 2024-04-05]
+
+### Atividades Realizadas
+- Adaptação do sistema UniChat para suporte nativo a MacBooks com chip M1/M2/M3 (ARM)
+- Criação do script `local_setup.sh` para configuração do ambiente LLM local no MacOS
+- Desenvolvimento de `docker-compose.override.yml` para desativar o serviço LLM em Docker
+- Implementação da detecção automática de arquitetura ARM para uso otimizado do Metal API
+- Modificação do serviço LLM para aproveitar a aceleração por hardware via Metal no MacOS
+- Ajuste nos scripts para verificação do modelo LLM local sem tentativas de download automático
+- Configuração para que o LLM seja inicializado automaticamente em Macs ARM sem pedir confirmação
+- Atualização do `start_unichat.sh` para orquestrar a inicialização integrada dos serviços
+- Adição do comando `populate_db` ao iniciar o backend para garantir que dados de exemplo sejam criados
+
+### Decisões Tomadas
+- Execução do LLM localmente enquanto outros serviços permanecem em Docker: maximizar performance no M1
+- Uso da API Metal da Apple para LLM: aceleração via GPU do chip M1/M2/M3
+- Carregamento manual do modelo em vez de download automático: controle e segurança
+- Detecção automática do chip ARM: configuração zero para melhor experiência do usuário
+- Adição do comando populate_db no docker-compose.override.yml: garantir dados de teste disponíveis
+
+### Problemas Encontrados
+- Incompatibilidade do llama-cpp-python em contêiner Docker no M1: resolvido com execução local
+- O banco de dados não era populado automaticamente no MacOS: corrigido com adição do comando populate_db
+- Script original pedia confirmação para iniciar o LLM: modificado para iniciar automaticamente em Macs M1
+- O processo de verificação do modelo fazia downloads não solicitados: modificado para apenas verificar
+
+### Próximos Passos
+- Aperfeiçoar a documentação específica para MacOS M1/M2/M3
+- Implementar verificações de validação para garantir que o LLM está respondendo conforme esperado
+- Otimizar ainda mais os parâmetros do LLM para a arquitetura ARM
+- Explorar o uso de Metal Performance Shaders (MPS) para maior aceleração
+
+### Observações
+A adaptação para MacOS com chips M1/M2/M3 representa um avanço significativo na experiência de desenvolvimento, permitindo aproveitar a potência do hardware Apple para execução do LLM com melhor desempenho. A arquitetura híbrida (serviços em Docker + LLM nativo) oferece o melhor dos dois mundos: isolamento e padronização para a maioria dos serviços, e performance nativa para o componente mais exigente (LLM). Os scripts desenvolvidos simplificam significativamente o processo de configuração, tornando a experiência de desenvolvimento mais fluida.
 
 ## [Data: 2024-04-06]
 

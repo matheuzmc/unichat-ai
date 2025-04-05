@@ -577,3 +577,121 @@ Se os tempos forem significativamente maiores, verifique os seguintes pontos:
 1. Confirme se o sistema de cache está funcionando (verifique os logs)
 2. Verifique se os parâmetros do modelo foram corretamente ajustados
 3. Verifique se o hardware tem recursos suficientes (especialmente CPU) 
+
+## Problemas Específicos do MacOS com Apple Silicon (M1/M2/M3)
+
+### Problema: Serviço LLM não Inicia Automaticamente no M1/M2/M3
+
+**Sintoma:**
+Após executar `./start_unichat.sh`, o LLM não é iniciado automaticamente ou não é detectado pelo sistema.
+
+**Solução:**
+Verifique se o script `local_setup.sh` detecta corretamente a arquitetura ARM:
+
+```bash
+# Verificar a saída de:
+uname -a
+```
+
+Se a saída contiver "arm64", mas o LLM não foi iniciado automaticamente, verifique a função de detecção no script:
+
+```bash
+# Edite o arquivo llm/local_setup.sh e verifique se possui:
+if [[ "$(uname)" == "Darwin" && "$(uname -m)" == "arm64" ]]; then
+    is_mac_arm=true
+fi
+```
+
+### Problema: LLM Local não Utiliza Aceleração Metal no M1/M2/M3
+
+**Sintoma:**
+O LLM está rodando, mas com desempenho abaixo do esperado ou mensagens de erro sobre Metal no log.
+
+**Solução:**
+Certifique-se de que o llama-cpp-python foi instalado com suporte a Metal:
+
+```bash
+cd llm
+source venv/bin/activate
+pip uninstall -y llama-cpp-python
+CMAKE_ARGS="-DLLAMA_METAL=on" pip install llama-cpp-python
+```
+
+Depois, verifique se o código está configurado para utilizar o Metal:
+
+```python
+# Em llm/app/llm_service.py deve haver:
+if is_mac_m1:
+    llm_gguf = llama_cpp.Llama(
+        model_path=model_path,
+        n_ctx=4096,
+        n_gpu_layers=40,
+        use_mlock=True,
+        offload_kqv=True
+    )
+```
+
+### Problema: Modelo LLM não Encontrado no MacOS
+
+**Sintoma:**
+Erro indicando que o modelo não foi encontrado em `llm/models/Phi-3-mini-4k-instruct-q4.gguf`.
+
+**Solução:**
+1. Verifique se o arquivo existe:
+```bash
+ls -la llm/models/
+```
+
+2. Se o arquivo não existir, baixe-o manualmente e coloque-o no diretório correto:
+```bash
+mkdir -p llm/models
+# Baixe o modelo de uma fonte confiável e coloque-o em llm/models/
+```
+
+3. Verifique as permissões do arquivo:
+```bash
+chmod 644 llm/models/Phi-3-mini-4k-instruct-q4.gguf
+```
+
+### Problema: Banco de Dados não é Populado Automaticamente no MacOS
+
+**Sintoma:**
+Ao iniciar o sistema no MacOS, o banco de dados está vazio, sem dados de exemplo.
+
+**Solução:**
+Verifique se o arquivo `docker-compose.override.yml` contém o comando para popular o banco:
+
+```yaml
+backend:
+  command: >
+    sh -c "python manage.py migrate &&
+           python manage.py populate_db &&
+           python manage.py runserver 0.0.0.0:8000"
+```
+
+Se não, edite o arquivo ou execute manualmente:
+
+```bash
+docker exec -it unichat-backend python manage.py populate_db
+```
+
+### Problema: Erro de Memória ao Carregar o LLM no MacOS
+
+**Sintoma:**
+O serviço LLM encerra com erro relacionado à falta de memória (OOM) ao tentar carregar o modelo.
+
+**Solução:**
+1. Ajuste os parâmetros do modelo para usar menos memória:
+
+```python
+# Em llm/app/llm_service.py, ajuste:
+llm_gguf = llama_cpp.Llama(
+    model_path=model_path,
+    n_ctx=1024,  # Reduzir o contexto
+    n_gpu_layers=20,  # Reduzir camadas na GPU
+    use_mlock=True
+)
+```
+
+2. Feche aplicativos que consomem muita memória
+3. Considere usar um modelo mais leve 

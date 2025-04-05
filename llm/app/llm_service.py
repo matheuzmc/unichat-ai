@@ -13,9 +13,6 @@ from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
 
-# Adicionar caminho da biblioteca llama-cpp-python instalada localmente
-sys.path.insert(0, '/tmp/llama_cpp_install')
-
 # Configurar logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -33,9 +30,17 @@ try:
     import llama_cpp
     has_llama_cpp = True
     logger.info("llama-cpp-python importado com sucesso!")
-except ImportError:
-    logger.warning("llama-cpp-python não está disponível. O modelo GGUF não será utilizado.")
+    logger.info(f"Caminho do módulo llama_cpp: {llama_cpp.__file__}")
+    # Verificar se estamos em um Mac M1
+    import platform
+    is_macos = platform.system() == "Darwin"
+    is_arm = platform.machine() == "arm64"
+    is_mac_m1 = is_macos and is_arm
+    logger.info(f"Sistema: {platform.system()}, Arquitetura: {platform.machine()}, É Mac M1: {is_mac_m1}")
+except ImportError as e:
+    logger.warning(f"llama-cpp-python não está disponível. O modelo GGUF não será utilizado. Erro: {e}")
     has_llama_cpp = False
+    is_mac_m1 = False
 
 # Carrega variáveis de ambiente
 load_dotenv()
@@ -47,53 +52,6 @@ backend_url = os.getenv("BACKEND_URL", "http://backend/api")
 model_path = os.getenv("LLM_MODEL_PATH", "/app/models/Phi-3-mini-4k-instruct-q4.gguf")
 # URL atualizada para um modelo no Hugging Face
 model_url = os.getenv("LLM_MODEL_URL", "https://huggingface.co/mradermacher/ggml-gpt4all-j-v1.3-groovy/resolve/main/ggml-gpt4all-j-v1.3-groovy.bin")
-
-# Função de download comentada - o download será feito manualmente pelo usuário
-"""
-def download_model():
-    
-    # Baixa o modelo GPT4All da URL especificada.
-    
-    # Certifique-se de que o diretório existe
-    os.makedirs(os.path.dirname(model_path), exist_ok=True)
-    
-    # Baixa o modelo
-    logger.info(f"Baixando modelo de {model_url} para {model_path}...")
-    
-    try:
-        # Configurar cabeçalhos para evitar 403 Forbidden
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
-        
-        req = urllib.request.Request(model_url, headers=headers)
-        with urllib.request.urlopen(req) as response, open(model_path, 'wb') as out_file:
-            total_size = int(response.info().get('Content-Length', 0))
-            downloaded = 0
-            chunk_size = 1024 * 1024  # 1MB chunks
-            
-            logger.info(f"Tamanho total do modelo: {total_size / (1024 * 1024):.2f} MB")
-            
-            while True:
-                chunk = response.read(chunk_size)
-                if not chunk:
-                    break
-                
-                out_file.write(chunk)
-                downloaded += len(chunk)
-                
-                # Log do progresso a cada 10%
-                if total_size > 0:
-                    percent = downloaded * 100 / total_size
-                    if percent % 10 < 1:  # Log apenas a cada ~10%
-                        logger.info(f"Download progresso: {percent:.1f}% ({downloaded / (1024 * 1024):.1f} MB / {total_size / (1024 * 1024):.1f} MB)")
-            
-        logger.info("Download do modelo concluído com sucesso!")
-        return True
-    except Exception as e:
-        logger.error(f"Erro ao baixar modelo: {str(e)}")
-        return False
-"""
 
 def setup_llm():
     """
@@ -121,16 +79,31 @@ def setup_llm():
         try:
             # Tentar carregar o modelo GGUF com llama-cpp-python
             logger.info(f"Tentando carregar modelo GGUF de {model_path}...")
-            logger.info(f"Módulo llama_cpp importado de: {llama_cpp.__file__}")
             
-            # Parâmetros detalhados para debug
-            logger.info(f"Parâmetros de inicialização: n_ctx=4096, n_threads=4")
-            
-            llm_gguf = llama_cpp.Llama(
-                model_path=model_path,
-                n_ctx=4096,       # Tamanho do contexto
-                n_threads=4       # Número de threads
-            )
+            # Configurações específicas para Mac M1 com Metal
+            if is_mac_m1:
+                logger.info("Configurando parâmetros otimizados para Mac M1 com Metal")
+                llm_gguf = llama_cpp.Llama(
+                    model_path=model_path,
+                    n_ctx=4096,            # Tamanho do contexto
+                    n_batch=512,           # Tamanho do lote para processamento
+                    n_threads=6,           # Número de threads para CPU cores auxiliares
+                    n_gpu_layers=40,       # Número de camadas para processar na GPU
+                    use_mlock=True,        # Manter o modelo na RAM
+                    verbose=True,          # Saída verbosa para debug
+                    seed=-1,               # Semente aleatória para reprodutibilidade
+                    offload_kqv=True       # Offload key/query/value para a GPU
+                )
+                logger.info("Modelo GGUF carregado com suporte a Metal no Mac M1")
+            else:
+                # Configuração padrão para outros sistemas
+                logger.info("Usando configuração padrão para sistemas não-M1")
+                llm_gguf = llama_cpp.Llama(
+                    model_path=model_path,
+                    n_ctx=4096,       # Tamanho do contexto
+                    n_threads=4       # Número de threads
+                )
+                
             logger.info(f"Modelo GGUF carregado com sucesso de {model_path}")
             return
         except Exception as e:
